@@ -107,10 +107,10 @@ void iot_bsp_debug_check_heap(const char* tag, const char* func, const int line,
 	va_end(va);
 
 	if (count == 0) {
-		PRINT_ST_WARN_LOG(tag, "%s(%d) > [MEMCHK][%d] Heap total size : %d", func, line, count, _iot_bsp_debug_get_maximum_heap_size());
+        iot_bsp_debug(2, tag, "%s(%d) > [MEMCHK][%d] Heap total size : %d", func, line, count, _iot_bsp_debug_get_maximum_heap_size());
 	}
 
-	PRINT_ST_WARN_LOG(tag, "%s(%d) > [MEMCHK][%d][%s] CU:%d, CR:%d, PU:%d, PR:%d", func, line, ++count, buf,
+	iot_bsp_debug(2, tag, "%s(%d) > [MEMCHK][%d][%s] CU:%d, CR:%d, PU:%d, PR:%d", func, line, ++count, buf,
 			_iot_bsp_debug_get_maximum_heap_size() - _iot_bsp_debug_get_free_heap_size(),
 			_iot_bsp_debug_get_free_heap_size(),
 			_iot_bsp_debug_get_maximum_heap_size() - _iot_bsp_debug_get_minimum_free_heap_size(),
