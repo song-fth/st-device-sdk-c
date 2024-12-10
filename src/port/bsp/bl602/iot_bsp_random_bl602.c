@@ -25,5 +25,12 @@
 
 unsigned int iot_bsp_random()
 {
-	return demo_hosal_rng();
+	uint8_t num;
+	hosal_rng_init();
+	int ret = hosal_random_num_read(&num, 1);
+	if (ret != 0)
+	{
+		printf("read error\r\n");
+	}
+	return num;
 }
