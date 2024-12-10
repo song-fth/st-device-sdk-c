@@ -21,11 +21,8 @@
 #include <sys/time.h>
 #include "task.h"
 #include "hal_sys.h"
-
 #include "iot_bsp_system.h"
 #include "iot_debug.h"
-
-#define BL_SDK_VER release_bl_iot_sdk_1.6.40 - 40 - gfb91fe21a - dirty
 
 const char *iot_bsp_get_bsp_name()
 {
