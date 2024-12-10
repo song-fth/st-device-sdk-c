@@ -45,7 +45,7 @@ void iot_bl_system_reboot()
 
 void iot_bl_system_poweroff()
 {
-	hal_poweroff(); // no poweroff feature.
+	iot_bl_system_reboot();// no poweroff feature.
 }
 
 iot_error_t iot_bl_system_get_time_in_sec(char* buf, unsigned int buf_len)
