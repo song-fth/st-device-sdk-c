@@ -49,20 +49,6 @@ void iot_bl_system_poweroff()
 	iot_bl_system_reboot(); // no poweroff feature.
 }
 
-void iot_bl_system_get_time_in_sec(char *buf, unsigned int buf_len)
-{
-	/* get rtc time */
-	hosal_rtc_get_time(&rtc, &time_buf);
-	/*if(0 != ret) {
-			IOT_ERROR("rtc get time error\r\n");
-			return IOT_ERROR_INVALID_ARGS;
-	}*/
-
-	snprintf(buf, buf_len, "%02hu-%02hhu-%02hhu-%02hhu-%02hhu-%02hhu", time_buf.year, time_buf.month, time_buf.date, time_buf.hr, time_buf.min, time_buf.sec);
-	// return IOT_ERROR_NONE;
-	// hosal_rtc_finalize(&rtc);
-}
-
 iot_error_t iot_bl_system_get_time_in_sec(char *buf, unsigned int buf_len)
 {
 	IOT_WARN_CHECK(buf == NULL, IOT_ERROR_INVALID_ARGS, "buffer for time is NULL");
