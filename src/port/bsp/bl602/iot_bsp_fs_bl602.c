@@ -24,9 +24,6 @@
 #include "iot_bsp_fs.h"
 #include "iot_debug.h"
 
-//#define STDK_NV_DATA_NAMESPACE "stdk"
-//#define STDK_NV_SECTOR_SIZE	(EF_ERASE_MIN_SIZE)
-#define STDK_NV_SECTOR_SIZE 512
 #define MAX_NV_ITEM_CNT		19
 char * nv_set[MAX_NV_ITEM_CNT] = {
 	"WifiProvStatus",   // WifiProvStatus
@@ -50,16 +47,6 @@ char * nv_set[MAX_NV_ITEM_CNT] = {
 	"SerialNum",	    // SerialNum
 };
 
-static void nv_storage_init(void)
-{
-	uint8_t data = 0xFF;
-	char tmp[32] = {0};
-	for (int i = 0; i < MAX_NV_ITEM_CNT; i++) {
-		memset(tmp, 0, sizeof(tmp));
-		strncpy(tmp, nv_set[i], sizeof(tmp));
-		ef_set_env_blob(tmp, &data, STDK_NV_SECTOR_SIZE);
-	}
-}
 
 iot_error_t iot_bsp_fs_init()
 {
@@ -69,7 +56,7 @@ iot_error_t iot_bsp_fs_init()
 		IOT_DEBUG("fs init fail");
 		return IOT_ERROR_INIT_FAIL;
 	}
-	nv_storage_init();
+
 	return IOT_ERROR_NONE;
 }
 
@@ -80,15 +67,21 @@ iot_error_t iot_bsp_fs_deinit()
 
 iot_error_t iot_bsp_fs_open(const char* filename, iot_bsp_fs_open_mode_t mode, iot_bsp_fs_handle_t* handle)
 {
-	iot_bsp_fs_open_mode_t flag = mode;
+        iot_bsp_fs_open_mode_t flag = mode;
 
-	if (NULL == filename) {
-		IOT_DEBUG("filename is NULL,open failed");
-		return IOT_ERROR_INVALID_ARGS;
-	}
-	snprintf(handle->filename, sizeof(handle->filename), "%s", filename);
-	return IOT_ERROR_NONE;
+        if (NULL == filename) {
+                IOT_DEBUG("filename is NULL,open failed");
+                return IOT_ERROR_INVALID_ARGS;
+        }
+        for (int i = 0; i < MAX_NV_ITEM_CNT; i++) {
+                if(strncmp(filename, nv_set[i], strlen(nv_set[i]))) {
+                        IOT_DEBUG("filename is a new file, Does not exist in the nv_set");
+                }
+        }
+        snprintf(handle->filename, sizeof(handle->filename), "%s", filename);
+        return IOT_ERROR_NONE;
 }
+
 
 iot_error_t iot_bsp_fs_close(iot_bsp_fs_handle_t handle)
 {
@@ -109,13 +102,17 @@ iot_error_t iot_bsp_fs_read(iot_bsp_fs_handle_t handle, char* buffer, size_t *le
 		IOT_DEBUG("data read failed");
 		return IOT_ERROR_FS_READ_FAIL;
 	}
+	*length = read_len; //return the real data length saved on the flash
 	return IOT_ERROR_NONE;
 }
 
 iot_error_t iot_bsp_fs_write(iot_bsp_fs_handle_t handle, const char* data, unsigned int length)
 {
 	int ret;
-	size_t read_len = 0;
+	if (NULL == data) {
+		IOT_DEBUG("data is NULL,write failed");
+		return IOT_ERROR_INVALID_ARGS;
+	}
 	ret = ef_set_env_blob(handle.filename, data, length);
 	IOT_DEBUG_CHECK(ret < 0, IOT_ERROR_FS_WRITE_FAIL, "data write failed");
 	return IOT_ERROR_NONE;
@@ -124,7 +121,7 @@ iot_error_t iot_bsp_fs_write(iot_bsp_fs_handle_t handle, const char* data, unsig
 iot_error_t iot_bsp_fs_remove(const char* filename)
 {
 	int ret;
-        if (NULL == filename) {
+    if (NULL == filename) {
 		IOT_DEBUG("filename is NULL,remove failed");
 		return IOT_ERROR_INVALID_ARGS;
 	}
