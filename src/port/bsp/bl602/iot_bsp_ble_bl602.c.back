@@ -19,13 +19,13 @@
 #include <string.h>
 #include <sys/time.h>
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "event_groups.h"
 #include "sdkconfig.h"
 
 #include "bluetooth.h"
-#include "bt_log.h"
+//#include "bt_log.h"
 
 #include <aos/kernel.h>
 #include <aos/yloop.h>
@@ -37,6 +37,7 @@
 #include "ble_lib_api.h"
 #include "bluetooth.h"
 
+#include "iot_debug.h"
 #include "iot_bsp_ble.h"
 
 #define GATTS_TAG "BLE_ONBOARD"
@@ -195,7 +196,7 @@ void set_advertise_mac_addr(uint8_t **mac)
 	lmac = (uint8_t *)malloc(BT_MAC_LENGTH);
 	if (!lmac)
 	{
-		BT_ERR("failed to malloc for lmac\n");
+		IOT_ERROR("failed to malloc for lmac\n");
 		*mac = NULL;
 		return;
 	}
@@ -231,7 +232,7 @@ void iot_create_advertise_packet(char *mnid, char *setupid, char *serial)
 		display_serial[i] = serial[serial_len - DISPLAY_SERIAL_NUMBER_SIZE + i];
 	}
 	display_serial[DISPLAY_SERIAL_NUMBER_SIZE] = '\0';
-	BT_INFO(">> Display_Serial [%c%c%c%c] <<", display_serial[0], display_serial[1],
+	IOT_INFO(">> Display_Serial [%c%c%c%c] <<", display_serial[0], display_serial[1],
 			display_serial[2], display_serial[3]);
 #endif
 
@@ -371,14 +372,14 @@ int iot_send_indication(uint8_t *buf, uint32_t len)
 		gettimeofday(&elasped_tv, NULL);
 		if (elasped_tv.tv_sec - start_tv.tv_sec >= 5)
 		{
-			BT_INFO("Wait confirm timeout 5s");
+			IOT_INFO("Wait confirm timeout 5s");
 			return 1;
 		}
 	}
 
 	if (!gatt_connected)
 	{
-		BT_INFO("%s No gatt connection", __func__);
+		IOT_INFO("%s No gatt connection", __func__);
 		return 1;
 	}
 
@@ -419,11 +420,11 @@ void bleapps_adv_starting(void)
 {
 	int err;
 
-	BT_INFO("Bluetooth Advertising start\n");
+	IOT_INFO("Bluetooth Advertising start\n");
 	err = bt_le_adv_start(BT_LE_ADV_CONN_NAME, ad, ARRAY_SIZE(ad), NULL, 0);
 	if (err)
 	{
-		BT_ERR("Advertising failed to start (err %d)\n", err);
+		IOT_ERROR("Advertising failed to start (err %d)\n", err);
 	}
 }
 
@@ -431,7 +432,7 @@ static void bt_ready(void)
 {
 
 	bt_set_name("blf_602");
-	BT_INFO("Bluetooth initiblfized\n");
+	IOT_INFO("Bluetooth initiblfized\n");
 	bleapps_adv_starting();
 }
 
@@ -450,11 +451,11 @@ static void ble_app_init(int err)
 {
 	if (err != 0)
 	{
-		BT_ERR("BT FAILED started\n");
+		IOT_ERROR("BT FAILED started\n");
 	}
 	else
 	{
-		BT_INFO("BT SUCCESS started\n");
+		IOT_INFO("BT SUCCESS started\n");
 		g_ble_status = BL_BLE_STATUS_INIT;
 		bt_ready();
 	}
@@ -528,7 +529,7 @@ void iot_bsp_ble_init(CharWriteCallback cb)
 	int err;
 	if (g_ble_status == BL_BLE_STATUS_INIT)
 	{
-		BT_INFO("ESP BLE already initialised");
+		IOT_INFO("ESP BLE already initialised");
 		return;
 	}
 
@@ -548,11 +549,11 @@ void iot_bsp_ble_init(CharWriteCallback cb)
 		err = bt_gatt_service_register(&ble_bl_server);
 		if (err == 0)
 		{
-			BT_INFO("bt_gatt_service_register ok\n");
+			IOT_INFO("bt_gatt_service_register ok\n");
 		}
 		else
 		{
-			BT_ERR("bt_gatt_service_register err\n");
+			IOT_ERROR("bt_gatt_service_register err\n");
 			return;
 		}
 	}
@@ -578,7 +579,7 @@ void iot_bsp_ble_deinit(void)
 {
 	if (g_ble_status != BL_BLE_STATUS_INIT)
 	{
-		BT_INFO("BL BLE already deinitalised");
+		IOT_INFO("BL BLE already deinitalised");
 		return;
 	}
 	bt_disable();

@@ -19,13 +19,14 @@
 #include <string.h>
 #include <time.h>
 
-#include "aos/yloop.h"
-#include "wifi_mgmr_ext.h"
-#include "netif.h"
+#include <aos/yloop.h>
+#include <wifi_mgmr_ext.h>
+#include <wifi_mgmr.h>
+//#include <netif.h>
 #include "bl60x_fw_api.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/event_groups.h"
+#include "FreeRTOS.h"
+#include "event_groups.h"
 
 #include "iot_debug.h"
 #include "iot_bsp_wifi.h"
@@ -34,6 +35,13 @@
 
 #include "lwip/apps/sntp.h"
 #include "lwip/inet.h"
+
+#define BIT5    0x00000020
+#define BIT4    0x00000010
+#define BIT3    0x00000008
+#define BIT2    0x00000004
+#define BIT1    0x00000002
+#define BIT0    0x00000001
 
 const int WIFI_INIT_BIT      		= BIT0;
 const int WIFI_STA_CONNECT_BIT		= BIT1;
@@ -49,14 +57,14 @@ static iot_error_t s_latest_disconnect_reason;
 static EventGroupHandle_t wifi_event_group;
 static iot_bsp_wifi_event_cb_t wifi_event_cb;
 static bool s_wifi_connect_timeout = false;
-
+/*
 static void bl_ap_sta_get_mac(uint8_t index, uint8_t *mac)
 {
     struct wifi_sta_basic_info sta_info;
     wifi_mgmr_ap_sta_info_get(&sta_info, index);
     strncpy(mac, sta_info.sta_mac, sizeof(sta_info.sta_mac) - 1);
 }
-
+*/
 static void set_disconnect_reason(uint16_t id)
 {
     if (id == WLAN_FW_DEAUTH_BY_AP_WHEN_NOT_CONNECTION || id == WLAN_FW_DEAUTH_BY_AP_WHEN_CONNECTION) {
@@ -131,12 +139,16 @@ static void event_cb_wifi_event(input_event_t *event, void *private_data)
         break;
 
         case CODE_WIFI_ON_AP_STA_ADD:
-        {
+        {   /*
             uint8_t mac[6];
             memset(mac, 0, sizeof(mac));
-            bl_ap_sta_get_mac((uint8_t)event->data, mac);
+            bl_ap_sta_get_mac((uint8_t)event->value, mac);
             IOT_INFO("station: %02x:%02x:%02x:%02x:%02x:%02x join",
-				mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+				mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);*/
+            struct wifi_sta_basic_info sta_info;
+            wifi_mgmr_ap_sta_info_get(&sta_info, (uint8_t)event->value);
+            IOT_INFO("station: %02x:%02x:%02x:%02x:%02x:%02x join\r\n", 
+            sta_info.sta_mac[0],sta_info.sta_mac[1],sta_info.sta_mac[2],sta_info.sta_mac[3],sta_info.sta_mac[4],sta_info.sta_mac[5]);
             if (wifi_event_cb) {
 			    IOT_DEBUG("0x%p called", wifi_event_cb);
 			    (*wifi_event_cb)(IOT_WIFI_EVENT_SOFTAP_STA_JOIN, IOT_ERROR_NONE);
@@ -145,12 +157,16 @@ static void event_cb_wifi_event(input_event_t *event, void *private_data)
         break;
 
         case CODE_WIFI_ON_AP_STA_DEL:
-        {
+        {   /*
             uint8_t mac[6];
             memset(mac, 0, sizeof(mac));
-            bl_ap_sta_get_mac((uint8_t)event->data, mac);
+            bl_ap_sta_get_mac((uint8_t)event->value, mac);
             IOT_INFO("station: %02x:%02x:%02x:%02x:%02x:%02x join",
-				mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+				mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);*/
+            struct wifi_sta_basic_info sta_info;
+            wifi_mgmr_ap_sta_info_get(&sta_info, (uint8_t)event->value);
+            IOT_INFO("station: %02x:%02x:%02x:%02x:%02x:%02x join\r\n", 
+            sta_info.sta_mac[0],sta_info.sta_mac[1],sta_info.sta_mac[2],sta_info.sta_mac[3],sta_info.sta_mac[4],sta_info.sta_mac[5]);
             if (wifi_event_cb) {
 			    IOT_DEBUG("0x%p called", wifi_event_cb);
 			    (*wifi_event_cb)(IOT_WIFI_EVENT_SOFTAP_STA_LEAVE, IOT_ERROR_NONE);

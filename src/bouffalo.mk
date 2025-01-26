@@ -1,13 +1,13 @@
 #
 # Component Makefile
 #
-
+# $(info !!!!!![iot-core mk---])
 ifdef CONFIG_STDK_IOT_CORE
 
 COMPONENT_ADD_INCLUDEDIRS += include include/bsp include/os include/mqtt include/external include/port
 
 COMPONENT_SRCDIRS += ./
-
+# $(info !!!!!![iot-core mk] $(COMPONENT_SRCDIRS))
 ifeq ($(CONFIG_STDK_IOT_CORE_BSP_SUPPORT_ESP8266),y)
 	COMPONENT_SRCDIRS += port/bsp/esp8266
 	COMPONENT_ADD_INCLUDEDIRS += include/bsp/esp8266
@@ -38,6 +38,9 @@ else ifeq ($(CONFIG_STDK_IOT_CORE_BSP_SUPPORT_EMW3166),y)
 else ifeq ($(CONFIG_STDK_IOT_CORE_BSP_SUPPORT_EMW3080),y)
 	COMPONENT_SRCDIRS += port/bsp/emw3080
 	COMPONENT_ADD_INCLUDEDIRS += include/bsp/emw3080
+else ifeq ($(CONFIG_STDK_IOT_CORE_BSP_SUPPORT_BL602),y)
+	COMPONENT_SRCDIRS += port/bsp/bl602
+	COMPONENT_ADD_INCLUDEDIRS += include/bsp/bl602
 else ifeq ($(CONFIG_STDK_IOT_CORE_BSP_SUPPORT_TIZENRT),y)
 	COMPONENT_SRCDIRS += port/bsp/tizenrt
 	COMPONENT_ADD_INCLUDEDIRS += include/bsp/tizenrt
@@ -65,7 +68,9 @@ else
 endif
 
 COMPONENT_SRCDIRS += deps/cbor/tinycbor/src
+COMPONENT_SRCDIRS += deps/json/cJSON
 COMPONENT_ADD_INCLUDEDIRS += deps/cbor/tinycbor/src
+COMPONENT_ADD_INCLUDEDIRS += deps/json/cJSON
 
 COMPONENT_SRCDIRS += security
 COMPONENT_SRCDIRS += port/crypto/reference
@@ -91,12 +96,13 @@ else
 	COMPONENT_SRCDIRS += easysetup/http/tcp
 endif
 
-CPPFLAGS += -include $(COMPONENT_PATH)/include/iot_common.h
+CPPFLAGS += -include $(IOT_CORE_PATH)/src/include/iot_common.h
 
 COMPONENT_SRCDIRS += mqtt/client mqtt/packet
 
 CFLAGS += -std=c99
-
+# $(info ~`~`~`~`~`$(CPPFLAGS))
+# $(info ~`~`~`~`~`$(CFLAGS))
 else
 # Disable SmartThing Device SDK support
 COMPONENT_ADD_INCLUDEDIRS :=
