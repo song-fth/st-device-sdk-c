@@ -40,7 +40,9 @@ else ifeq ($(CONFIG_STDK_IOT_CORE_BSP_SUPPORT_EMW3080),y)
 	COMPONENT_ADD_INCLUDEDIRS += include/bsp/emw3080
 else ifeq ($(CONFIG_STDK_IOT_CORE_BSP_SUPPORT_BL602),y)
 	COMPONENT_SRCDIRS += port/bsp/bl602
+	
 	COMPONENT_ADD_INCLUDEDIRS += include/bsp/bl602
+	
 else ifeq ($(CONFIG_STDK_IOT_CORE_BSP_SUPPORT_TIZENRT),y)
 	COMPONENT_SRCDIRS += port/bsp/tizenrt
 	COMPONENT_ADD_INCLUDEDIRS += include/bsp/tizenrt
@@ -69,8 +71,11 @@ endif
 
 COMPONENT_SRCDIRS += deps/cbor/tinycbor/src
 COMPONENT_SRCDIRS += deps/json/cJSON
+COMPONENT_SRCDIRS += deps/libsodium/libsodium/src/libsodium
 COMPONENT_ADD_INCLUDEDIRS += deps/cbor/tinycbor/src
 COMPONENT_ADD_INCLUDEDIRS += deps/json/cJSON
+COMPONENT_ADD_INCLUDEDIRS += deps/libsodium/libsodium/src/libsodium
+
 
 COMPONENT_SRCDIRS += security
 COMPONENT_SRCDIRS += port/crypto/reference
@@ -97,8 +102,10 @@ else
 endif
 
 CPPFLAGS += -include $(IOT_CORE_PATH)/src/include/iot_common.h
-
+#COMPONENT_SRCDIRS = deps/libsodium/libsodium/src
 COMPONENT_SRCDIRS += mqtt/client mqtt/packet
+
+$(info !----iot-core component src: $(COMPONENT_SRCDIRS))
 
 CFLAGS += -std=c99
 # $(info ~`~`~`~`~`$(CPPFLAGS))
