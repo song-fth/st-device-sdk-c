@@ -20,10 +20,11 @@
 #include "iot_bsp_random.h"
 #include "iot_debug.h"
 #include "iot_error.h"
-uint32_t random;
+
 unsigned int iot_bsp_random()
 {
 	int ret = -1;
+	uint32_t random;
 	/*init rng */
 	hosal_rng_init();
 	ret = hosal_random_num_read(&random, sizeof(rand)/sizeof(uint32_t));

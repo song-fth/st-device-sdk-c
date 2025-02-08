@@ -16,8 +16,9 @@
  *
  ****************************************************************************/
 #include <stdio.h>
-#include <sys/time.h> 
-#include "task.h"
+#include <sys/time.h>
+#include <FreeRTOS.h>
+#include <task.h>
 #include "hal_sys.h"
 #include "iot_bsp_system.h"
 #include "iot_debug.h"
@@ -35,16 +36,16 @@ const char* iot_bsp_get_bsp_version_string()
 	return BL_SDK_VER;
 }
 
-void iot_bl_system_reboot()
+void iot_bsp_system_reboot()
 {
     // Disable scheduler on this core.
     vTaskSuspendAll();
 	hal_sys_reset();	
 }
 
-void iot_bl_system_poweroff()
+void iot_bsp_system_poweroff()
 {
-	iot_bl_system_reboot(); // no poweroff feature.
+	iot_bsp_system_reboot(); // no poweroff feature.
 }
 
 iot_error_t iot_bsp_system_get_time_in_sec(char* buf, unsigned int buf_len)

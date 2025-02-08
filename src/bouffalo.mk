@@ -39,6 +39,8 @@ else ifeq ($(CONFIG_STDK_IOT_CORE_BSP_SUPPORT_EMW3080),y)
 	COMPONENT_SRCDIRS += port/bsp/emw3080
 	COMPONENT_ADD_INCLUDEDIRS += include/bsp/emw3080
 else ifeq ($(CONFIG_STDK_IOT_CORE_BSP_SUPPORT_BL602),y)
+	CPPFLAGS += -DSTDK_IOT_CORE_BSP_SUPPORT_BL602
+	CPPFLAGS += -DMBEDTLS_ECDH_LEGACY_CONTEXT
 	COMPONENT_SRCDIRS += port/bsp/bl602
 	
 	COMPONENT_ADD_INCLUDEDIRS += include/bsp/bl602
@@ -71,11 +73,19 @@ endif
 
 COMPONENT_SRCDIRS += deps/cbor/tinycbor/src
 COMPONENT_SRCDIRS += deps/json/cJSON
-COMPONENT_SRCDIRS += deps/libsodium/libsodium/src/libsodium
+#src/deps/libsodium/libsodium/src/libsodium/crypto_sign/crypto_sign.c
+COMPONENT_SRCDIRS += \
+	deps/libsodium/libsodium/src/libsodium/sodium \
+	deps/libsodium/libsodium/src/libsodium/crypto_sign \
+	deps/libsodium/libsodium/src/libsodium/crypto_sign/ed25519 \
+	deps/libsodium/libsodium/src/libsodium/crypto_sign/ed25519/ref10 \
+	deps/libsodium/libsodium/src/libsodium/crypto_hash/sha512/cp \
+	deps/libsodium/libsodium/src/libsodium/crypto_core/ed25519/ref10
 COMPONENT_ADD_INCLUDEDIRS += deps/cbor/tinycbor/src
 COMPONENT_ADD_INCLUDEDIRS += deps/json/cJSON
-COMPONENT_ADD_INCLUDEDIRS += deps/libsodium/libsodium/src/libsodium
-
+COMPONENT_ADD_INCLUDEDIRS += deps/libsodium/libsodium/src/libsodium/include
+COMPONENT_ADD_INCLUDEDIRS += deps/libsodium/port/include/sodium
+$(info !_test $(COMPONENT_SRCDIRS))
 
 COMPONENT_SRCDIRS += security
 COMPONENT_SRCDIRS += port/crypto/reference
@@ -102,10 +112,16 @@ else
 endif
 
 CPPFLAGS += -include $(IOT_CORE_PATH)/src/include/iot_common.h
+# CPPFLAGS += -include $(IOT_CORE_PATH)/src/deps/libsodium/libsodium/src/libsodium/include/sodium.h
+CFLAGS += -I$(IOT_CORE_PATH)/src/deps/libsodium/port/include
+CFLAGS += -I$(IOT_CORE_PATH)/src/deps/libsodium/libsodium/src/libsodium/include/sodium
 #COMPONENT_SRCDIRS = deps/libsodium/libsodium/src
 COMPONENT_SRCDIRS += mqtt/client mqtt/packet
 
 $(info !----iot-core component src: $(COMPONENT_SRCDIRS))
+
+$(info ==== CFLAGS ====)
+$(info $(CFLAGS))
 
 CFLAGS += -std=c99
 # $(info ~`~`~`~`~`$(CPPFLAGS))
