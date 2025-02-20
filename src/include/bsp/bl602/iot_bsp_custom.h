@@ -15,25 +15,10 @@
  * language governing permissions and limitations under the License.
  *
  ****************************************************************************/
-#include <hosal_rng.h>
-#include <stdint.h>
-#include "iot_bsp_random.h"
-#include "iot_debug.h"
-#include "iot_error.h"
 
-unsigned int iot_bsp_random()
-{
-	int ret = -1;
-	uint32_t random;
-	/*init rng */
-	hosal_rng_init();
-	ret = hosal_random_num_read(&random, sizeof(rand)/sizeof(uint32_t));
-	if (0 != ret) {
-        IOT_ERROR("rng read error\r\n");
-		return IOT_ERROR_INVALID_ARGS;
-    }
-	return random;
+#ifndef _IOT_BSP_CUSTOM_H_
+#define _IOT_BSP_CUSTOM_H_
 
-}
+#include "sdkconfig.h"
 
-
+#endif /* _IOT_BSP_CUSTOM_H_ */

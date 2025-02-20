@@ -18,6 +18,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <blog.h>
 #include "FreeRTOS.h"
 #include "iot_bsp_debug.h"

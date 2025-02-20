@@ -96,7 +96,7 @@ iot_error_t iot_bsp_fs_read(iot_bsp_fs_handle_t handle, char* buffer, size_t *le
 		IOT_DEBUG("buffer is NULL,read failed");
 		return IOT_ERROR_INVALID_ARGS;
 	}
-	
+
 	ret = ef_get_env_blob(handle.filename, buffer, *length, &read_len);
 	if (0 > ret) {
 		IOT_DEBUG("data read failed");
@@ -120,15 +120,19 @@ iot_error_t iot_bsp_fs_write(iot_bsp_fs_handle_t handle, const char* data, unsig
 
 iot_error_t iot_bsp_fs_remove(const char* filename)
 {
-	int ret;
-    if (NULL == filename) {
+	EfErrCode ret;
+	if (NULL == filename) {
 		IOT_DEBUG("filename is NULL,remove failed");
 		return IOT_ERROR_INVALID_ARGS;
 	}
 	ret = ef_del_env(filename);
-	if (0 != ret) {
-		IOT_DEBUG("remove file failed");
-		return IOT_ERROR_FS_REMOVE_FAIL;
+	if (ret != EF_NO_ERR) {
+		IOT_DEBUG("remove file failed: %d", ret);
+		if (ret == EF_ENV_NAME_ERR) {
+			return IOT_ERROR_FS_NO_FILE;
+		} else {
+			return IOT_ERROR_FS_REMOVE_FAIL;
+		}
 	}
 	return IOT_ERROR_NONE;
 }

@@ -19,13 +19,24 @@
 #include <string.h>
 #include <time.h>
 
-#include "aos/yloop.h"
-#include "wifi_mgmr_ext.h"
-#include "netif.h"
+#include <aos/kernel.h>
+#include <aos/yloop.h>
+#include <event_device.h>
+#include <bl_efuse.h>
+#include <hal_wifi.h>
+#include <wifi_mgmr_ext.h>
+#include <bl60x_wifi_driver/wifi_mgmr.h>
+#include <bl60x_wifi_driver/bl_main.h>
+#include <lwip/tcpip.h>
+#include <lwip/sockets.h>
+#include <lwip/netdb.h>
+#include <lwip/tcp.h>
+#include <lwip/err.h>
+//#include <netif.h>
 #include "bl60x_fw_api.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/event_groups.h"
+#include "FreeRTOS.h"
+#include "event_groups.h"
 
 #include "iot_debug.h"
 #include "iot_bsp_wifi.h"
@@ -34,6 +45,13 @@
 
 #include "lwip/apps/sntp.h"
 #include "lwip/inet.h"
+
+#define BIT5    0x00000020
+#define BIT4    0x00000010
+#define BIT3    0x00000008
+#define BIT2    0x00000004
+#define BIT1    0x00000002
+#define BIT0    0x00000001
 
 const int WIFI_INIT_BIT      		= BIT0;
 const int WIFI_STA_CONNECT_BIT		= BIT1;
@@ -49,14 +67,18 @@ static iot_error_t s_latest_disconnect_reason;
 static EventGroupHandle_t wifi_event_group;
 static iot_bsp_wifi_event_cb_t wifi_event_cb;
 static bool s_wifi_connect_timeout = false;
-
+static wifi_conf_t wifi_conf =
+{
+    .country_code = "CN",
+};
+/*
 static void bl_ap_sta_get_mac(uint8_t index, uint8_t *mac)
 {
     struct wifi_sta_basic_info sta_info;
     wifi_mgmr_ap_sta_info_get(&sta_info, index);
     strncpy(mac, sta_info.sta_mac, sizeof(sta_info.sta_mac) - 1);
 }
-
+*/
 static void set_disconnect_reason(uint16_t id)
 {
     if (id == WLAN_FW_DEAUTH_BY_AP_WHEN_NOT_CONNECTION || id == WLAN_FW_DEAUTH_BY_AP_WHEN_CONNECTION) {
@@ -73,8 +95,8 @@ static void set_disconnect_reason(uint16_t id)
 
 static void event_cb_wifi_event(input_event_t *event, void *private_data)
 {
-    static char *ssid;
-    static char *password;
+    //static char *ssid;
+    //static char *password;
     struct sm_connect_tlv_desc* ele = NULL;
 
     switch (event->code) {
@@ -96,12 +118,13 @@ static void event_cb_wifi_event(input_event_t *event, void *private_data)
 		    IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_EVENT_DEAUTH, wifi_mgmr_status_code_str(event->value), 0);
             xEventGroupSetBits(wifi_event_group, WIFI_STA_DISCONNECT_BIT);
             set_disconnect_reason((uint16_t)event->value);
-
+            /*
             if (s_wifi_connect_timeout == false) {
                 esp_wifi_connect();
             } else {
                 s_wifi_connect_timeout = false;
             }
+            */
             xEventGroupClearBits(wifi_event_group, WIFI_STA_CONNECT_BIT);
         }
         break;
@@ -109,7 +132,7 @@ static void event_cb_wifi_event(input_event_t *event, void *private_data)
         case CODE_WIFI_ON_GOT_IP:
         {
             uint32_t ip;
-            *ip = netif_ip4_addr(&wifiMgmr.wlan_sta.netif)->addr;
+            ip = netif_ip4_addr(&wifiMgmr.wlan_sta.netif)->addr;
             IOT_INFO("got ip:%s", ip4addr_ntoa(&ip));
             s_wifi_connect_timeout = false;
             xEventGroupSetBits(wifi_event_group, WIFI_STA_CONNECT_BIT);
@@ -131,12 +154,16 @@ static void event_cb_wifi_event(input_event_t *event, void *private_data)
         break;
 
         case CODE_WIFI_ON_AP_STA_ADD:
-        {
+        {   /*
             uint8_t mac[6];
             memset(mac, 0, sizeof(mac));
-            bl_ap_sta_get_mac((uint8_t)event->data, mac);
+            bl_ap_sta_get_mac((uint8_t)event->value, mac);
             IOT_INFO("station: %02x:%02x:%02x:%02x:%02x:%02x join",
-				mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+				mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);*/
+            struct wifi_sta_basic_info sta_info;
+            wifi_mgmr_ap_sta_info_get(&sta_info, (uint8_t)event->value);
+            IOT_INFO("station: %02x:%02x:%02x:%02x:%02x:%02x join\r\n", 
+            sta_info.sta_mac[0],sta_info.sta_mac[1],sta_info.sta_mac[2],sta_info.sta_mac[3],sta_info.sta_mac[4],sta_info.sta_mac[5]);
             if (wifi_event_cb) {
 			    IOT_DEBUG("0x%p called", wifi_event_cb);
 			    (*wifi_event_cb)(IOT_WIFI_EVENT_SOFTAP_STA_JOIN, IOT_ERROR_NONE);
@@ -145,12 +172,16 @@ static void event_cb_wifi_event(input_event_t *event, void *private_data)
         break;
 
         case CODE_WIFI_ON_AP_STA_DEL:
-        {
+        {   /*
             uint8_t mac[6];
             memset(mac, 0, sizeof(mac));
-            bl_ap_sta_get_mac((uint8_t)event->data, mac);
+            bl_ap_sta_get_mac((uint8_t)event->value, mac);
             IOT_INFO("station: %02x:%02x:%02x:%02x:%02x:%02x join",
-				mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+				mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);*/
+            struct wifi_sta_basic_info sta_info;
+            wifi_mgmr_ap_sta_info_get(&sta_info, (uint8_t)event->value);
+            IOT_INFO("station: %02x:%02x:%02x:%02x:%02x:%02x join\r\n", 
+            sta_info.sta_mac[0],sta_info.sta_mac[1],sta_info.sta_mac[2],sta_info.sta_mac[3],sta_info.sta_mac[4],sta_info.sta_mac[5]);
             if (wifi_event_cb) {
 			    IOT_DEBUG("0x%p called", wifi_event_cb);
 			    (*wifi_event_cb)(IOT_WIFI_EVENT_SOFTAP_STA_LEAVE, IOT_ERROR_NONE);
@@ -163,8 +194,7 @@ static void event_cb_wifi_event(input_event_t *event, void *private_data)
             IOT_INFO("Complete scanning");
             xEventGroupSetBits(wifi_event_group, WIFI_SCAN_DONE_BIT);
         }
-
-
+        break;
         default:
         {
             printf("[APP] [EVT] Unknown code %u, %lld\r\n", event->code, aos_now_ms());
@@ -175,7 +205,6 @@ static void event_cb_wifi_event(input_event_t *event, void *private_data)
 
 iot_error_t iot_bsp_wifi_init ()
 {
-	esp_err_t esp_ret;
     EventBits_t uxBits = 0;
 
 	IOT_INFO("[bl602] iot_bsp_wifi_init");
@@ -184,10 +213,10 @@ iot_error_t iot_bsp_wifi_init ()
 		return IOT_ERROR_NONE;
 
     wifi_event_group = xEventGroupCreate();
-
-	aos_register_event_filter(EV_WIFI, event_cb_wifi_event, NULL);
+    aos_register_event_filter(EV_WIFI, event_cb_wifi_event, NULL);
+    tcpip_init(NULL, NULL);
     hal_wifi_start_firmware_task();
-    wifi_mgmr_start_background(&conf);
+    wifi_mgmr_start_background(&wifi_conf);
 
     uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_INIT_BIT,
 				true, false, IOT_WIFI_CMD_TIMEOUT);
@@ -224,6 +253,22 @@ static void stop_ap()
     wifi_mgmr_ap_stop(NULL);
 }
 
+static unsigned char char_to_hex(char asccode)
+{
+    unsigned char ret;
+
+    if('0'<=asccode && asccode<='9')
+        ret=asccode-'0';
+    else if('a'<=asccode && asccode<='f')
+        ret=asccode-'a'+10;
+    else if('A'<=asccode && asccode<='F')
+        ret=asccode-'A'+10;
+    else
+        ret=0;
+
+    return ret;
+}
+
 static void bssid_str_to_mac(uint8_t *hex, char *bssid, int len)
 {
    unsigned char l4,h4;
@@ -250,10 +295,8 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
     int str_len = 0;
 	time_t now;
 	struct tm timeinfo;
-	wifi_mode_t mode = WIFI_MODE_NULL;
     int state = WIFI_STATE_UNKNOWN;
 	EventBits_t uxBits = 0;
-	esp_err_t esp_ret;
     char ssid[33], password[66];
     char bssid[32];
     uint8_t mac[6];
@@ -296,7 +339,7 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
             }
             else {
 				IOT_ERROR("WIFI_AP_STOP_BIT event Timeout");
-				IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_TIMEOUT, mode, __LINE__);
+				IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_TIMEOUT, conf->mode, __LINE__);
 				return IOT_ERROR_CONN_OPERATE_FAIL;
 			}
         }
@@ -314,7 +357,7 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
 				IOT_INFO("Ready for wifi scan");
 			} else {
 				IOT_ERROR("Device is busy connecting to AP");
-				IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_TIMEOUT, mode, __LINE__);
+				IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_TIMEOUT, conf->mode, __LINE__);
 				return IOT_ERROR_CONN_OPERATE_FAIL;
 			}
 		}
@@ -337,15 +380,14 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
             }
             else {
 				IOT_ERROR("WIFI_AP_STOP_BIT event Timeout");
-				IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_TIMEOUT, mode, __LINE__);
+				IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_TIMEOUT, conf->mode, __LINE__);
 				return IOT_ERROR_CONN_OPERATE_FAIL;
 			}
-
         }
         wifi_interface = wifi_mgmr_sta_enable();
         strncpy(ssid, conf->ssid, sizeof(ssid) - 1);
         strncpy(password, conf->pass, sizeof(password) - 1);
-        strncpy(bssid, conf->bssid, sizeof(bssid) - 1);
+        strncpy(bssid, (const char *)conf->bssid, sizeof(bssid) - 1);
         bssid_str_to_mac(mac, bssid, strlen(bssid));
         if (wifi_mgmr_sta_connect(wifi_interface, ssid, password, NULL, mac, 0, 0) == -1) {
             IOT_ERROR("Failed to connect");
@@ -378,7 +420,7 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
 
         wifi_mgmr_ap_start_atcmd(wifi_interface, ap_ssid, ap_hidden_ssid, ap_password, ap_channel, ap_max_connection);
         IOT_DEBUG("wifi_init_softap finished.SSID:%s password:%s",
-				wifi_config.ap.ssid, wifi_config.ap.password);
+				ap_ssid, ap_password);
 
         uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_AP_START_BIT,
 				true, false, IOT_WIFI_CMD_TIMEOUT);
@@ -421,7 +463,8 @@ uint16_t iot_bsp_wifi_get_scan_result(iot_wifi_scan_result_t *scan_result)
     uint8_t bssid[6];
     uint8_t scan_mode = 1;
     int channel_num = 0;
-    uint32_t duration;
+    EventBits_t uxBits = 0;
+    uint32_t duration = 0;
     memset(bssid, 255, sizeof(bssid));
 
     wifi_mgmr_scan_adv(NULL, NULL, NULL, channel_num, bssid, NULL, scan_mode, duration);
@@ -442,11 +485,11 @@ uint16_t iot_bsp_wifi_get_scan_result(iot_wifi_scan_result_t *scan_result)
             iot_wifi_auth_mode_t conv_auth_mode;
             conv_auth_mode = bl_transfer_auth_mode(wifiMgmr.scan_items[i].auth);
 
-            memcpy(scan_result[ap_num].ssid, wifiMgmr.scan_items[i].ssid, strlen(ap_list[i].ssid));
+            memcpy(scan_result[ap_num].ssid, wifiMgmr.scan_items[i].ssid, strlen(wifiMgmr.scan_items[i].ssid));
 			memcpy(scan_result[ap_num].bssid, wifiMgmr.scan_items[i].bssid, IOT_WIFI_MAX_BSSID_LEN);
-            scan_result[i].rssi = wifiMgmr.scan_items[i].rssi;
-			scan_result[i].freq = iot_util_convert_channel_freq(wifiMgmr.scan_items[i].channel);
-			scan_result[i].authmode = conv_auth_mode;
+            scan_result[ap_num].rssi = wifiMgmr.scan_items[i].rssi;
+			scan_result[ap_num].freq = iot_util_convert_channel_freq(wifiMgmr.scan_items[i].channel);
+			scan_result[ap_num].authmode = conv_auth_mode;
             ap_num++;
         }
     }
@@ -455,7 +498,7 @@ uint16_t iot_bsp_wifi_get_scan_result(iot_wifi_scan_result_t *scan_result)
 
 iot_error_t iot_bsp_wifi_get_mac(struct iot_mac *wifi_mac)
 {
-    if (!wifi_mgmr_sta_mac_get(wifi_mac->addr)) {
+    if (wifi_mgmr_sta_mac_get(wifi_mac->addr) != 0) {
         IOT_ERROR("failed to read wifi mac address");
 		IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_ERROR, 0, __LINE__);
 		return IOT_ERROR_CONN_OPERATE_FAIL;
@@ -495,18 +538,20 @@ iot_wifi_auth_mode_bits_t iot_bsp_wifi_get_auth_mode(void)
 
 bool iot_bsp_wifi_is_dhcp_success()
 {
+    EventBits_t uxBits = 0;
     uint32_t ip = 0;
-    uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_STA_GOT_IP_BIT,
+    uxBits = xEventGroupWaitBits(wifi_event_group, WIFI_STA_CONNECT_BIT,
 				true, false, IOT_WIFI_CMD_TIMEOUT);
 
-    if(!(uxBits & WIFI_STA_GOT_IP_BIT)) {
+    if(!(uxBits & WIFI_STA_CONNECT_BIT)) {
         IOT_ERROR("WIFI_AP_START_BIT event Timeout");
         IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_TIMEOUT, conf->mode, __LINE__);
         return false;
     }
-    *ip = netif_ip4_addr(&wifiMgmr.wlan_sta.netif)->addr;
-    IOT_DEBUG("Wifi station IP Address :" IPSTR ", ", ip4addr_ntoa(&ip));
+    ip = netif_ip4_addr(&wifiMgmr.wlan_sta.netif)->addr;
+    //IOT_DEBUG("Wifi station IP Address :" IPSTR ", ", ip4addr_ntoa(&ip));
     return true;
+}
 
 iot_error_t iot_bsp_wifi_get_status(void)
 {

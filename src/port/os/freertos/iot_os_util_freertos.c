@@ -18,13 +18,22 @@
 
 #include <string.h>
 #include <stdbool.h>
+#ifdef STDK_IOT_CORE_BSP_SUPPORT_BL602
+#include <stdio.h>
+#include <FreeRTOS.h>
+#include <task.h>
+#include <queue.h>
+#include <event_groups.h>
+#include <semphr.h>
+#include <timers.h>
+#else
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
 #include "freertos/semphr.h"
 #include "freertos/timers.h"
-
+#endif
 #include "iot_error.h"
 #include "iot_os_util.h"
 
