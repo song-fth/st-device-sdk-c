@@ -27,6 +27,11 @@
 #include <wifi_mgmr_ext.h>
 #include <bl60x_wifi_driver/wifi_mgmr.h>
 #include <bl60x_wifi_driver/bl_main.h>
+#include <lwip/tcpip.h>
+#include <lwip/sockets.h>
+#include <lwip/netdb.h>
+#include <lwip/tcp.h>
+#include <lwip/err.h>
 //#include <netif.h>
 #include "bl60x_fw_api.h"
 
@@ -208,8 +213,8 @@ iot_error_t iot_bsp_wifi_init ()
 		return IOT_ERROR_NONE;
 
     wifi_event_group = xEventGroupCreate();
-
-	aos_register_event_filter(EV_WIFI, event_cb_wifi_event, NULL);
+    aos_register_event_filter(EV_WIFI, event_cb_wifi_event, NULL);
+    tcpip_init(NULL, NULL);
     hal_wifi_start_firmware_task();
     wifi_mgmr_start_background(&wifi_conf);
 
@@ -378,7 +383,6 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
 				IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_TIMEOUT, conf->mode, __LINE__);
 				return IOT_ERROR_CONN_OPERATE_FAIL;
 			}
-
         }
         wifi_interface = wifi_mgmr_sta_enable();
         strncpy(ssid, conf->ssid, sizeof(ssid) - 1);
@@ -416,7 +420,7 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
 
         wifi_mgmr_ap_start_atcmd(wifi_interface, ap_ssid, ap_hidden_ssid, ap_password, ap_channel, ap_max_connection);
         IOT_DEBUG("wifi_init_softap finished.SSID:%s password:%s",
-				wifi_config.ap.ssid, wifi_config.ap.password);
+				ap_ssid, ap_password);
 
         uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_AP_START_BIT,
 				true, false, IOT_WIFI_CMD_TIMEOUT);
@@ -483,9 +487,9 @@ uint16_t iot_bsp_wifi_get_scan_result(iot_wifi_scan_result_t *scan_result)
 
             memcpy(scan_result[ap_num].ssid, wifiMgmr.scan_items[i].ssid, strlen(wifiMgmr.scan_items[i].ssid));
 			memcpy(scan_result[ap_num].bssid, wifiMgmr.scan_items[i].bssid, IOT_WIFI_MAX_BSSID_LEN);
-            scan_result[i].rssi = wifiMgmr.scan_items[i].rssi;
-			scan_result[i].freq = iot_util_convert_channel_freq(wifiMgmr.scan_items[i].channel);
-			scan_result[i].authmode = conv_auth_mode;
+            scan_result[ap_num].rssi = wifiMgmr.scan_items[i].rssi;
+			scan_result[ap_num].freq = iot_util_convert_channel_freq(wifiMgmr.scan_items[i].channel);
+			scan_result[ap_num].authmode = conv_auth_mode;
             ap_num++;
         }
     }
@@ -494,7 +498,7 @@ uint16_t iot_bsp_wifi_get_scan_result(iot_wifi_scan_result_t *scan_result)
 
 iot_error_t iot_bsp_wifi_get_mac(struct iot_mac *wifi_mac)
 {
-    if (!wifi_mgmr_sta_mac_get(wifi_mac->addr)) {
+    if (wifi_mgmr_sta_mac_get(wifi_mac->addr) != 0) {
         IOT_ERROR("failed to read wifi mac address");
 		IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_ERROR, 0, __LINE__);
 		return IOT_ERROR_CONN_OPERATE_FAIL;
@@ -545,7 +549,7 @@ bool iot_bsp_wifi_is_dhcp_success()
         return false;
     }
     ip = netif_ip4_addr(&wifiMgmr.wlan_sta.netif)->addr;
-    IOT_DEBUG("Wifi station IP Address :" IPSTR ", ", ip4addr_ntoa(&ip));
+    //IOT_DEBUG("Wifi station IP Address :" IPSTR ", ", ip4addr_ntoa(&ip));
     return true;
 }
 
