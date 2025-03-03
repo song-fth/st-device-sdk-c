@@ -24,14 +24,15 @@
 unsigned int iot_bsp_random()
 {
 	int ret = -1;
-	uint32_t random;
+	unsigned int random;
 	/*init rng */
 	hosal_rng_init();
-	ret = hosal_random_num_read(&random, sizeof(rand)/sizeof(uint32_t));
+	ret = hosal_random_num_read(&random, sizeof(random)/sizeof(uint32_t));
 	if (0 != ret) {
         IOT_ERROR("rng read error\r\n");
 		return IOT_ERROR_INVALID_ARGS;
     }
+
 	return random;
 
 }
