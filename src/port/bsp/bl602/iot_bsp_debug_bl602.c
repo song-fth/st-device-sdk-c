@@ -33,12 +33,12 @@
 #define DEBUG_LOG_COLOR_END       "\033[0m"
 
 
-#define PRINT_ST_INFO_LOG(TAG, M, ...)     do {__blog_printf(INFO_LOG_COLOR_HEAD "W (%u) %s : %s" INFO_LOG_COLOR_END "\r\n",\
+#define PRINT_ST_INFO_LOG(TAG, M, ...)     do {__blog_printf(INFO_LOG_COLOR_HEAD "I (%u) %s : %s" INFO_LOG_COLOR_END "\r\n",\
             (xPortIsInsideInterrupt())?(xTaskGetTickCountFromISR()):(xTaskGetTickCount()), \
             TAG, M, ##__VA_ARGS__);\
         } while(0==1)
 
-#define PRINT_ST_WARN_LOG(TAG, M, ...)     do {__blog_printf(WARN_LOG_COLOR_HEAD "I (%u) %s : %s" WARN_LOG_COLOR_END "\r\n",\
+#define PRINT_ST_WARN_LOG(TAG, M, ...)     do {__blog_printf(WARN_LOG_COLOR_HEAD "W (%u) %s : %s" WARN_LOG_COLOR_END "\r\n",\
             (xPortIsInsideInterrupt())?(xTaskGetTickCountFromISR()):(xTaskGetTickCount()), \
             TAG, M, ##__VA_ARGS__);\
         } while(0==1)
