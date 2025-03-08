@@ -104,7 +104,7 @@ static uint8_t ble_onboarding_char_uuid[16] = {0x09, 0x0E, 0xE6, 0x80, 0x02, 0x3
 #define MAX_DEVICE_NAME_DATA_LEN 0x12
 #endif
 
-#define GATTS_MTU_MAX 185
+#define GATTS_MTU_MAX 247
 
 #define MANUFACTURER_ID 0x75
 
@@ -112,8 +112,8 @@ size_t device_onboarding_id_len;
 int indication_need_confirmed;
 int gatt_connected;
 
-int is_sendindicate_sleep = 0;
-int is_sendindicate = 0;
+static int is_sendindicate_sleep = 0;
+// static int is_sendindicate = 0;
 /* ble status */
 enum bl_ble_status
 {
@@ -131,15 +131,9 @@ static int ble_blf_recv(struct bt_conn *conn,
 //  static u8_t sam_manufacturer_id[20] = { 0x75,  0x0,  0x42,  0xc,  0x83,  0x5,  0x59,  0x66,  0x77,  0x43,  0x30,  0x30,  0x30,  0x33,  0x4,  0x1,  0x53,  0x54,  0x44,  0x4b};
 static u8_t sam_manufacturer_id1[9] = { 0x75,  0x0,  0x72,  0x2d,  0x71,  0x54,  0x55,  0x6d,  0x57};
 
-static const struct bt_data ad[] = {
-	// BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
-	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_NO_BREDR)),
-	//BT_DATA(BT_DATA_NAME_COMPLETE, "BL", 2),
-	BT_DATA(BT_DATA_MANUFACTURER_DATA, sam_manufacturer_id, sizeof(sam_manufacturer_id))
-};
-static const struct bt_data rsp[] = {
-	BT_DATA(BT_DATA_MANUFACTURER_DATA, sam_manufacturer_id1, sizeof(sam_manufacturer_id1	))
-};
+static u8_t advInd_manufacturer_data[26];
+static u8_t scanRsp_manufacturer_data[9];
+
 static struct bt_gatt_attr blattrs[] = {
 	BT_GATT_PRIMARY_SERVICE(BLE_ONBOARDING_SERVICE_UUID),
 
@@ -152,6 +146,8 @@ static struct bt_gatt_attr blattrs[] = {
 	BT_GATT_CCC(ble_bl_ccc_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 
 	};
+// static bt_addr_le_t macaddr = { 0, { { 0, 0, 0, 0, 0, 0 } } };
+
 static struct bt_conn *ble_bl_conn = NULL;
 static bool indicate_flag = false;
 
@@ -162,6 +158,7 @@ static uint8_t adv_config_done = 0;
 static uint8_t adv_data[PACKET_MAX_SIZE];
 static size_t adv_data_len;
 static size_t adv_data_mac_address_offset;
+static size_t adv_data_mac_address_offset1;
 static uint8_t scan_response_data[PACKET_MAX_SIZE];
 static size_t scan_response_len;
 static uint8_t manufacturer_id[2] = {0x75, 0x00};
@@ -177,6 +174,7 @@ static void ble_bl_ccc_cfg_changed(const struct bt_gatt_attr *attr, u16_t vblfue
 
 		printf("enable indicate.\n");
 		indicate_flag = true;
+
 	}
 	else
 	{
@@ -198,8 +196,21 @@ void set_advertise_mac_addr(uint8_t **mac)
 {
 	int i;
 	int counter = adv_data_mac_address_offset;
+	int counterN = adv_data_mac_address_offset1;
 	uint8_t *lmac = NULL;
-
+	// bt_addr_le_t *macAddr;
+	// struct bt_addr_le_t macId;
+	//  bt_addr_le_t bt_addr;
+	// bt_get_local_public_address(&bt_addr);
+	// printf("BD_ADDR:(MSB)%02x:%02x:%02x:%02x:%02x:%02x(LSB) \n",
+    //         bt_addr.a.val[5], bt_addr.a.val[4], bt_addr.a.val[3], bt_addr.a.val[2], bt_addr.a.val[1], bt_addr.a.val[0]);
+	bt_addr_le_t macaddr ;
+	size_t count = 6; // mac length
+	bt_id_get(&macaddr, &count);
+	for (i = 0; i < BT_MAC_LENGTH; i++){
+		// u8_t temp = macaddr.a.val[i];
+		IOT_INFO("macaddr.a.val[%d]: %x\n", i, macaddr.a.val[i]);
+	}
 	lmac = (uint8_t *)malloc(BT_MAC_LENGTH);
 	if (!lmac)
 	{
@@ -211,6 +222,7 @@ void set_advertise_mac_addr(uint8_t **mac)
 	for (i = 0; i < BT_MAC_LENGTH; i++)
 	{
 		adv_data[counter++] = lmac[i];
+		advInd_manufacturer_data[counterN++] = lmac[i];
 	}
 
 	*mac = lmac;
@@ -223,6 +235,7 @@ void iot_create_advertise_packet(char *mnid, char *setupid, char *serial)
 	int i;
 	int mnid_len = 0;
 	int setupid_len = 0;
+	int countN  = 0;
 
 #if !defined(CONFIG_STDK_IOT_CORE_EASYSETUP_X509)
 	char *hybrid_serial = serial;
@@ -255,12 +268,21 @@ void iot_create_advertise_packet(char *mnid, char *setupid, char *serial)
 	adv_data[count++] = PACKET_VERSION;
 	adv_data[count++] = OOB_SERVICE_INFO;
 	adv_data[count++] = SERVICE_FEATURE;
+	
+	advInd_manufacturer_data[countN++] = manufacturer_id[0];
+	advInd_manufacturer_data[countN++] = manufacturer_id[1];
+	advInd_manufacturer_data[countN++] = CONTROL_VERSION_ACTIVE_SCAN_REQUIRED;
+	advInd_manufacturer_data[countN++] = SERVICE_ID;
+	advInd_manufacturer_data[countN++] = PACKET_VERSION;
+	advInd_manufacturer_data[countN++] = OOB_SERVICE_INFO;
+	advInd_manufacturer_data[countN++] = SERVICE_FEATURE;
 
 	mnid_len = strlen(mnid);
 
 	for (i = 0; i < mnid_len; i++)
 	{
 		adv_data[count++] = (uint8_t)mnid[i];
+		advInd_manufacturer_data[countN++] = (uint8_t)mnid[i];
 	}
 
 	setupid_len = strlen(setupid);
@@ -268,22 +290,34 @@ void iot_create_advertise_packet(char *mnid, char *setupid, char *serial)
 	for (i = 0; i < setupid_len; i++)
 	{
 		adv_data[count++] = (uint8_t)setupid[i];
+		advInd_manufacturer_data[countN++] = (uint8_t)setupid[i];
 	}
 
 	adv_data[count++] = SETUP_AVAILABLE_NETWORK_BLE;
 	adv_data[count++] = BT_ADDRESS_TRANSFER;
 
+	advInd_manufacturer_data[countN++] = SETUP_AVAILABLE_NETWORK_BLE;
+	advInd_manufacturer_data[countN++] = BT_ADDRESS_TRANSFER;
+
 	adv_data_mac_address_offset = count;
 	count += MAC_ADD_COUNT;
+	adv_data_mac_address_offset1 = countN;
+	countN += MAC_ADD_COUNT;
 	set_advertise_mac_addr(&mac);
 
 	adv_data[count++] = CUSTOM_DATA_LEN;
 	adv_data[count++] = CUSTOM_TYPE;
 	adv_data[count++] = CUSTOM_TYPE_DATA_LEN;
+
+	advInd_manufacturer_data[countN++] = CUSTOM_DATA_LEN;
+	advInd_manufacturer_data[countN++] = CUSTOM_TYPE;
+	advInd_manufacturer_data[countN++] = CUSTOM_TYPE_DATA_LEN;
 #if defined(CONFIG_STDK_IOT_CORE_EASYSETUP_X509)
 	adv_data[count++] = display_serial[0];
+	advInd_manufacturer_data[countN++] = display_serial[0];
 #else
 	adv_data[count++] = hybrid_serial[0];
+	advInd_manufacturer_data[countN++] = hybrid_serial[0];
 #endif
 
 	adv_data_len = count;
@@ -295,11 +329,17 @@ void iot_create_advertise_packet(char *mnid, char *setupid, char *serial)
 		printf("0x%x,  ", adv_data[i]);
 	}
 	printf("\n");
+	for (i = 0; i < countN; i++)
+	{
+		printf("0x%x,  ", advInd_manufacturer_data[i]);
+	}
+	printf("\n");
 }
 
 void iot_create_scan_response_packet(char *device_onboarding_id, char *serial)
 {
 	int count = 0;
+	int countN = 0;
 	int i;
 #if !defined(CONFIG_STDK_IOT_CORE_EASYSETUP_X509)
 	char *hybrid_serial = serial;
@@ -334,15 +374,20 @@ void iot_create_scan_response_packet(char *device_onboarding_id, char *serial)
 	scan_response_data[count++] = manufacturer_id[0];
 	scan_response_data[count++] = manufacturer_id[1];
 
+	scanRsp_manufacturer_data[countN++] = manufacturer_id[0];
+	scanRsp_manufacturer_data[countN++] = manufacturer_id[1];
+
 #if defined(CONFIG_STDK_IOT_CORE_EASYSETUP_X509)
 	for (i = 1; i < DISPLAY_SERIAL_NUMBER_SIZE; i++)
 	{
 		scan_response_data[count++] = (uint8_t)display_serial[i];
+		scanRsp_manufacturer_data[countN++] = (uint8_t)display_serial[i];
 	}
 #else
 	for (i = 1; i < HYBRID_SERIAL_NUMBER_SIZE; i++)
 	{
 		scan_response_data[count++] = (uint8_t)hybrid_serial[i];
+		scanRsp_manufacturer_data[countN++] = (uint8_t)hybrid_serial[i];
 	}
 #endif
 
@@ -351,6 +396,7 @@ void iot_create_scan_response_packet(char *device_onboarding_id, char *serial)
 	for (i = count; i < PACKET_MAX_SIZE; i++)
 	{
 		scan_response_data[count++] = 0;
+		// scanRsp_manufacturer_data[countN++] = 0;
 	}
 
 	printf("\n");
@@ -359,10 +405,17 @@ void iot_create_scan_response_packet(char *device_onboarding_id, char *serial)
 	{
 		printf("0x%x,  ", scan_response_data[i]);
 	}
+	
+	printf("\n");
+
+	for (i = 0; i < countN; i++)
+	{
+		printf("0x%x,  ", scanRsp_manufacturer_data[i]);
+	}
 	printf("\n");
 }
 struct bt_gatt_service ble_bl_server = BT_GATT_SERVICE(blattrs);
-struct bt_gatt_indicate_params *params = NULL;
+
 static void bt_gatt_indicate_cb(struct bt_conn *conn,
 					const struct bt_gatt_attr *attr,
 					u8_t err)
@@ -370,36 +423,17 @@ static void bt_gatt_indicate_cb(struct bt_conn *conn,
 	//add 
 	IOT_INFO("bt_gatt_indicate_cb entry");
 	indication_need_confirmed = 0;
-	free(params);
-	params = NULL;
+
 }
 
-static struct k_fifo indicate_fifo; 
-void indicate_cb(struct bt_conn *conn,
-					const struct bt_gatt_attr *attr,
-					u8_t err) {
-    indication_need_confirmed = false;
-    // 从队列取出下一个数据并发送
-    struct bt_gatt_indicate_params *next = k_fifo_get(&indicate_fifo, K_NO_WAIT);
-    if (next) {
-        bt_gatt_indicate(conn, next);
-        indication_need_confirmed = true;
-    }
-}
-// 
 
 
-
+static struct bt_gatt_indicate_params params;
 int iot_send_indication(uint8_t *buf, uint32_t len)
 {
-	printf("Enter>>> iot_send_indication ：\n ");
-	is_sendindicate =1;
-	for (uint32_t i = 0; i < len; i++) {
-        printf("%02x ", buf[i]);
-    }
-    printf("\n");    printf("Length: %u\n", len);
+
 	struct timeval start_tv = {
-					   0,
+					   0,//
 				   },
 				   elasped_tv = {
 					   0,
@@ -407,10 +441,11 @@ int iot_send_indication(uint8_t *buf, uint32_t len)
 
 	gettimeofday(&start_tv, NULL);
 		IOT_INFO("iot_send_indication\n");
-		//2
+
 			printf("indicate_need_confirmed = %d\n", indication_need_confirmed);
 	while (indication_need_confirmed && gatt_connected)
-	{//IOT_INFO("iot_send_indication");
+	{
+		// IOT_INFO("iot_send_indication");
 		gettimeofday(&elasped_tv, NULL);
 		if (elasped_tv.tv_sec - start_tv.tv_sec >= 5)
 		{
@@ -419,23 +454,19 @@ int iot_send_indication(uint8_t *buf, uint32_t len)
 		}
 	}
 
-
-	struct bt_gatt_indicate_params params;
-
 	memset(&params, 0, sizeof(params));
 	params.attr = &blattrs[1];
+	//params.attr = &ble_bl_server.attrs[1];
 	params.data = buf;
 	params.len = len;
 	params.func = bt_gatt_indicate_cb;
 
-
-	IOT_INFO("iot_send_indication");
 	if (!gatt_connected)
 	{
 		IOT_INFO("%s No gatt connection", __func__);
 		return 1;
 	}
-	IOT_INFO("iot_send_indication");
+
 	
 	if (ble_bl_conn != NULL && indicate_flag == true)
 	{
@@ -448,11 +479,8 @@ int iot_send_indication(uint8_t *buf, uint32_t len)
 			IOT_ERROR("bt_gatt_indicate: %d\n",err);
 		}
 	}
-	// indication_need_confirmed = 0;
-	IOT_INFO("iot_send_indication\n");
-	is_sendindicate_sleep = 0;
-	IOT_INFO("iot_send_indication\n");
-		is_sendindicate = 0;
+
+
 	return 0;
 }
 
@@ -465,55 +493,42 @@ static int ble_blf_recv(struct bt_conn *conn,
 	uint8_t *recv_buffer;
 	recv_buffer = pvPortMalloc(sizeof(uint8_t) * len);
 	memcpy(recv_buffer, buf, len);
-	printf("ble rx=%d\n", len);
-	for (size_t i = 0; i < len; i++)
-	{
-		printf("0x%x ", recv_buffer[i]);
-	}
-	printf("\n");
-	printf("indicate_need_confirmed = %d\n", indication_need_confirmed);
-		printf("is_sendindicate_sleep = %d\n", is_sendindicate_sleep);
-		if(is_sendindicate){
 
-			// while (1)
-			// {
-				/* code */
-				if(is_sendindicate_sleep == 1)
-					k_sleep(K_MSEC(2000));
-				// if(indication_need_confirmed == 0)break;
-			//}
-		}
-		// while (1)
-		// {
-		// 	/* code */
-		// 	//if(is_sendindicate_sleep == 0)break;
-		// 	if(indication_need_confirmed == 0)break;
-		// }
-		// if(is_sendindicate_sleep == 0)
-		// 	return 0;
-	//if(attr->handle ==blattrs[1].handle){
-		if (CharWriteCb)
-		{
-		CharWriteCb(recv_buffer, len);
-		}
-	//}
+	if (CharWriteCb)
+	{
+	CharWriteCb(recv_buffer, len);
+	}
+
 	vPortFree(recv_buffer);
-	printf("\n");
+	
 	return (int)len;
 }
 
 // struct bt_gatt_service ble_bl_server = BT_GATT_SERVICE(blattrs);
 
-void bleapps_adv_starting(void)
+int bleapps_adv_starting(void)
 {
 	int err;
 
 	IOT_INFO("Bluetooth Advertising start\n");
+	struct bt_data ad[] = {
+	// BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
+	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_NO_BREDR)),
+	//BT_DATA(BT_DATA_NAME_COMPLETE, "BL", 2),
+	BT_DATA(BT_DATA_MANUFACTURER_DATA, advInd_manufacturer_data, sizeof(advInd_manufacturer_data))
+};
+	struct bt_data rsp[] = {
+	// BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
+	// BT_DATA(BT_DATA_NAME_COMPLETE,"BL_602" ,6),
+	//BT_DATA(BT_DATA_NAME_COMPLETE, "BL", 2),
+	BT_DATA(BT_DATA_MANUFACTURER_DATA, scanRsp_manufacturer_data, sizeof(scanRsp_manufacturer_data))
+};
 	err = bt_le_adv_start(BT_LE_ADV_CONN_NAME, ad, ARRAY_SIZE(ad), rsp, ARRAY_SIZE(rsp));
 	if (err)
 	{
 		IOT_ERROR("Advertising failed to start (err %d)\n", err);
 	}
+	return err;
 }
 
 static void bt_ready(void)
@@ -589,7 +604,15 @@ static void bl_connected(struct bt_conn *conn, uint8_t err)
 static void bl_disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	printf("Disconnected (reason 0x%02x)\n", reason);
-	bleapps_adv_starting();
+	/* Start ble advertisement only when onboarding is not completed */
+		bool onboarding_completed = iot_bsp_ble_get_onboarding_completion();
+		if (onboarding_completed == false) {
+			int start_adv_ret = bleapps_adv_starting();;
+			if (start_adv_ret) {
+				//ESP_LOGE(GATTS_TAG, "start ble advertisement failed, error code = 0x%x\n", start_adv_ret);
+			}
+		}
+	//bleapps_adv_starting();
 	if (ble_event_cb)
 	{
 		ble_event_cb(IOT_BLE_EVENT_GATT_LEAVE, IOT_ERROR_NONE);
