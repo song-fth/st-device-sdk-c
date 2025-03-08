@@ -126,6 +126,7 @@ static void event_cb_wifi_event(input_event_t *event, void *private_data)
             }
             */
             xEventGroupClearBits(wifi_event_group, WIFI_STA_CONNECT_BIT);
+            IOT_ERROR("clean bit: WIFI_STA_CONNECT_BIT");
         }
         break;
 
@@ -140,9 +141,16 @@ static void event_cb_wifi_event(input_event_t *event, void *private_data)
 
         case CODE_WIFI_ON_AP_STARTED:
         {
-            xEventGroupClearBits(wifi_event_group, WIFI_EVENT_BIT_ALL);
-            IOT_INFO("SYSTEM_EVENT_AP_START");
-            xEventGroupSetBits(wifi_event_group, WIFI_AP_START_BIT);
+            int state = WIFI_STATE_UNKNOWN;
+            wifi_mgmr_state_get(&state);
+            if (state == WIFI_STATE_CONNECTED_IP_GOT) {
+                //do not need do anything
+                IOT_INFO("got ip but enter ap started");
+            } else {
+                xEventGroupClearBits(wifi_event_group, WIFI_EVENT_BIT_ALL);
+                IOT_INFO("SYSTEM_EVENT_AP_START");
+                xEventGroupSetBits(wifi_event_group, WIFI_AP_START_BIT);
+            }
         }
         break;
 
@@ -162,7 +170,7 @@ static void event_cb_wifi_event(input_event_t *event, void *private_data)
 				mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);*/
             struct wifi_sta_basic_info sta_info;
             wifi_mgmr_ap_sta_info_get(&sta_info, (uint8_t)event->value);
-            IOT_INFO("station: %02x:%02x:%02x:%02x:%02x:%02x join\r\n", 
+            IOT_INFO("station: %02x:%02x:%02x:%02x:%02x:%02x join\r\n",
             sta_info.sta_mac[0],sta_info.sta_mac[1],sta_info.sta_mac[2],sta_info.sta_mac[3],sta_info.sta_mac[4],sta_info.sta_mac[5]);
             if (wifi_event_cb) {
 			    IOT_DEBUG("0x%p called", wifi_event_cb);
@@ -180,7 +188,7 @@ static void event_cb_wifi_event(input_event_t *event, void *private_data)
 				mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);*/
             struct wifi_sta_basic_info sta_info;
             wifi_mgmr_ap_sta_info_get(&sta_info, (uint8_t)event->value);
-            IOT_INFO("station: %02x:%02x:%02x:%02x:%02x:%02x join\r\n", 
+            IOT_INFO("station: %02x:%02x:%02x:%02x:%02x:%02x left\r\n",
             sta_info.sta_mac[0],sta_info.sta_mac[1],sta_info.sta_mac[2],sta_info.sta_mac[3],sta_info.sta_mac[4],sta_info.sta_mac[5]);
             if (wifi_event_cb) {
 			    IOT_DEBUG("0x%p called", wifi_event_cb);
@@ -348,7 +356,7 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
         //don't need do anything
         if (s_wifi_connect_timeout == true) {
 			xEventGroupClearBits(wifi_event_group, WIFI_STA_CONNECT_BIT | WIFI_STA_DISCONNECT_BIT);
-
+            IOT_ERROR("clean bit: WIFI_STA_CONNECT_BIT");
 			uxBits = xEventGroupWaitBits(wifi_event_group,
 				WIFI_STA_DISCONNECT_BIT | WIFI_STA_CONNECT_BIT,
 				true, false, IOT_WIFI_CMD_TIMEOUT);
@@ -389,13 +397,18 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
         strncpy(password, conf->pass, sizeof(password) - 1);
         strncpy(bssid, (const char *)conf->bssid, sizeof(bssid) - 1);
         bssid_str_to_mac(mac, bssid, strlen(bssid));
-        if (wifi_mgmr_sta_connect(wifi_interface, ssid, password, NULL, mac, 0, 0) == -1) {
+        if (wifi_mgmr_sta_connect_mid(wifi_interface, ssid, password, NULL, mac, 0, 0, 1, WIFI_CONNECT_PMF_CAPABLE) == -1) {
+        //if (wifi_mgmr_sta_connect(wifi_interface, ssid, password, NULL, mac, 0, 0) == -1) {
             IOT_ERROR("Failed to connect");
             return IOT_ERROR_CONN_OPERATE_FAIL;
         }
         uxBits = xEventGroupWaitBits(wifi_event_group, WIFI_STA_CONNECT_BIT,
 				true, false, IOT_WIFI_CMD_TIMEOUT);
 		if((uxBits & WIFI_STA_CONNECT_BIT)) {
+            wifi_mgmr_state_get(&state);
+            if (is_ap_started(state)) {
+                IOT_ERROR("Why ap started!!!!!!!!");
+            }
 			IOT_INFO("AP Connected");
 			IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_CONNECT_SUCCESS, 0, 0);
 		}
@@ -405,7 +418,7 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
 				s_latest_disconnect_reason);
 
 			s_wifi_connect_timeout = true;
-			return s_latest_disconnect_reason;
+			return IOT_ERROR_CONN_OPERATE_FAIL;
 		}
         break;
     case IOT_WIFI_MODE_SOFTAP:
@@ -419,7 +432,7 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
         wifi_interface = wifi_mgmr_ap_enable();
 
         wifi_mgmr_ap_start_atcmd(wifi_interface, ap_ssid, ap_hidden_ssid, ap_password, ap_channel, ap_max_connection);
-        IOT_DEBUG("wifi_init_softap finished.SSID:%s password:%s",
+        IOT_INFO("wifi_init_softap finished.SSID:%s password:%s",
 				ap_ssid, ap_password);
 
         uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_AP_START_BIT,
@@ -544,7 +557,7 @@ bool iot_bsp_wifi_is_dhcp_success()
 				true, false, IOT_WIFI_CMD_TIMEOUT);
 
     if(!(uxBits & WIFI_STA_CONNECT_BIT)) {
-        IOT_ERROR("WIFI_AP_START_BIT event Timeout");
+        IOT_ERROR("WIFI_STA_CONNECT_BIT event Timeout");
         IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_TIMEOUT, conf->mode, __LINE__);
         return false;
     }

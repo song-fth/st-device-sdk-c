@@ -34,7 +34,4 @@ unsigned int iot_bsp_random()
     }
 
 	return random;
-
 }
-
-
