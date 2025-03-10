@@ -39,6 +39,7 @@ else ifeq ($(CONFIG_STDK_IOT_CORE_BSP_SUPPORT_EMW3080),y)
 	COMPONENT_SRCDIRS += port/bsp/emw3080
 	COMPONENT_ADD_INCLUDEDIRS += include/bsp/emw3080
 else ifeq ($(CONFIG_STDK_IOT_CORE_BSP_SUPPORT_BL602),y)
+	include $(BL60X_SDK_PATH)/components/network/ble/ble_common.mk
 	CPPFLAGS += -DSTDK_IOT_CORE_BSP_SUPPORT_BL602
 	CPPFLAGS += -DMBEDTLS_ECDH_LEGACY_CONTEXT
 	COMPONENT_SRCDIRS += port/bsp/bl602
@@ -85,7 +86,8 @@ COMPONENT_ADD_INCLUDEDIRS += deps/cbor/tinycbor/src
 COMPONENT_ADD_INCLUDEDIRS += deps/json/cJSON
 COMPONENT_ADD_INCLUDEDIRS += deps/libsodium/libsodium/src/libsodium/include
 COMPONENT_ADD_INCLUDEDIRS += deps/libsodium/port/include/sodium
-$(info !_test $(COMPONENT_SRCDIRS))
+# $(info !_test $(COMPONENT_SRCDIRS))
+# $(info !---!!!!!!!!$(CONFIG_BT_CONN))
 
 COMPONENT_SRCDIRS += security
 COMPONENT_SRCDIRS += port/crypto/reference
@@ -98,12 +100,18 @@ endif
 COMPONENT_SRCDIRS += easysetup
 
 ifdef CONFIG_STDK_IOT_CORE_EASYSETUP_DISCOVERY_SSID
+CPPFLAGS += -DCONFIG_STDK_IOT_CORE_EASYSETUP_DISCOVERY_SSID
 COMPONENT_SRCDIRS += easysetup/discovery/ssid
 endif
 
 ifdef CONFIG_STDK_IOT_CORE_EASYSETUP_HTTP
 COMPONENT_SRCDIRS += easysetup/http
 endif
+
+#ifdef CONFIG_STDK_IOT_CORE_EASYSETUP_BLE
+#COMPONENT_SRCDIRS += easysetup/ble
+#COMPONENT_SRCDIRS += easysetup/discovery/advertiser
+#endif
 
 ifdef CONFIG_STDK_IOT_CORE_EASYSETUP_X509
 	COMPONENT_SRCDIRS += easysetup/http/tls
@@ -118,10 +126,10 @@ CFLAGS += -I$(IOT_CORE_PATH)/src/deps/libsodium/libsodium/src/libsodium/include/
 #COMPONENT_SRCDIRS = deps/libsodium/libsodium/src
 COMPONENT_SRCDIRS += mqtt/client mqtt/packet
 
-$(info !----iot-core component src: $(COMPONENT_SRCDIRS))
+# $(info !----iot-core component src: $(COMPONENT_SRCDIRS))
 
-$(info ==== CFLAGS ====)
-$(info $(CFLAGS))
+# $(info ==== CFLAGS ====)
+# $(info $(CFLAGS))
 
 CFLAGS += -std=c99
 # $(info ~`~`~`~`~`$(CPPFLAGS))
