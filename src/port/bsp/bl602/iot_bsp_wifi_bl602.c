@@ -46,6 +46,8 @@
 #include "lwip/apps/sntp.h"
 #include "lwip/inet.h"
 
+#define IOT_WIFI_CMD_TIMEOUT_BL602 10000
+
 #define BIT5    0x00000020
 #define BIT4    0x00000010
 #define BIT3    0x00000008
@@ -227,7 +229,7 @@ iot_error_t iot_bsp_wifi_init ()
     wifi_mgmr_start_background(&wifi_conf);
 
     uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_INIT_BIT,
-				true, false, IOT_WIFI_CMD_TIMEOUT);
+				true, false, IOT_WIFI_CMD_TIMEOUT_BL602);
 
     if(uxBits & WIFI_INIT_BIT) {
         WIFI_INITIALIZED = true;
@@ -325,7 +327,7 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
             stop_sta();
             //wait disconect done event
             uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_STA_DISCONNECT_BIT,
-				true, false, IOT_WIFI_CMD_TIMEOUT);
+				true, false, IOT_WIFI_CMD_TIMEOUT_BL602);
 
             if(uxBits & WIFI_STA_DISCONNECT_BIT) {
                 IOT_INFO("wifi disconnected");
@@ -340,7 +342,7 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
             stop_ap();
             //wait ap stop done event
             uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_AP_STOP_BIT,
-				true, false, IOT_WIFI_CMD_TIMEOUT);
+				true, false, IOT_WIFI_CMD_TIMEOUT_BL602);
 
             if(uxBits & WIFI_AP_STOP_BIT) {
                 IOT_INFO("AP mode stopped");
@@ -359,7 +361,7 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
             IOT_ERROR("clean bit: WIFI_STA_CONNECT_BIT");
 			uxBits = xEventGroupWaitBits(wifi_event_group,
 				WIFI_STA_DISCONNECT_BIT | WIFI_STA_CONNECT_BIT,
-				true, false, IOT_WIFI_CMD_TIMEOUT);
+				true, false, IOT_WIFI_CMD_TIMEOUT_BL602);
 
 			if (uxBits & (WIFI_STA_DISCONNECT_BIT | WIFI_STA_CONNECT_BIT)) {
 				IOT_INFO("Ready for wifi scan");
@@ -381,7 +383,7 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
             stop_ap();
             //wait ap stop done event
             uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_AP_STOP_BIT,
-				true, false, IOT_WIFI_CMD_TIMEOUT);
+				true, false, IOT_WIFI_CMD_TIMEOUT_BL602);
 
             if(uxBits & WIFI_AP_STOP_BIT) {
                 IOT_INFO("AP mode stopped");
@@ -403,7 +405,7 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
             return IOT_ERROR_CONN_OPERATE_FAIL;
         }
         uxBits = xEventGroupWaitBits(wifi_event_group, WIFI_STA_CONNECT_BIT,
-				true, false, IOT_WIFI_CMD_TIMEOUT);
+				true, false, IOT_WIFI_CMD_TIMEOUT_BL602);
 		if((uxBits & WIFI_STA_CONNECT_BIT)) {
             wifi_mgmr_state_get(&state);
             if (is_ap_started(state)) {
@@ -414,7 +416,7 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
 		}
 		else {
 			IOT_ERROR("WIFI_STA_CONNECT_BIT event Timeout %d", s_latest_disconnect_reason);
-			IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_CONNECT_FAIL, IOT_WIFI_CMD_TIMEOUT,
+			IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_CONNECT_FAIL, IOT_WIFI_CMD_TIMEOUT_BL602,
 				s_latest_disconnect_reason);
 
 			s_wifi_connect_timeout = true;
@@ -436,7 +438,7 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
 				ap_ssid, ap_password);
 
         uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_AP_START_BIT,
-				true, false, IOT_WIFI_CMD_TIMEOUT);
+				true, false, IOT_WIFI_CMD_TIMEOUT_BL602);
 
 		if(uxBits & WIFI_AP_START_BIT) {
 			IOT_INFO("AP Mode Started");
@@ -482,7 +484,7 @@ uint16_t iot_bsp_wifi_get_scan_result(iot_wifi_scan_result_t *scan_result)
 
     wifi_mgmr_scan_adv(NULL, NULL, NULL, channel_num, bssid, NULL, scan_mode, duration);
     uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_SCAN_DONE_BIT,
-				true, false, IOT_WIFI_CMD_TIMEOUT);
+				true, false, IOT_WIFI_CMD_TIMEOUT_BL602);
 
     if(!(uxBits & WIFI_SCAN_DONE_BIT)) {
         IOT_INFO("failed to get esp_wifi_scan_get_ap_num");
@@ -551,19 +553,15 @@ iot_wifi_auth_mode_bits_t iot_bsp_wifi_get_auth_mode(void)
 
 bool iot_bsp_wifi_is_dhcp_success()
 {
-    EventBits_t uxBits = 0;
     uint32_t ip = 0;
-    uxBits = xEventGroupWaitBits(wifi_event_group, WIFI_STA_CONNECT_BIT,
-				true, false, IOT_WIFI_CMD_TIMEOUT);
-
-    if(!(uxBits & WIFI_STA_CONNECT_BIT)) {
-        IOT_ERROR("WIFI_STA_CONNECT_BIT event Timeout");
-        IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_TIMEOUT, conf->mode, __LINE__);
-        return false;
+    int state = WIFI_STATE_UNKNOWN;
+    wifi_mgmr_state_get(&state);
+    if (state == WIFI_STATE_CONNECTED_IP_GOT) {
+        ip = netif_ip4_addr(&wifiMgmr.wlan_sta.netif)->addr;
+        //IOT_DEBUG("Wifi station IP Address :" IPSTR ", ", ip4addr_ntoa(&ip));
+        return true;
     }
-    ip = netif_ip4_addr(&wifiMgmr.wlan_sta.netif)->addr;
-    //IOT_DEBUG("Wifi station IP Address :" IPSTR ", ", ip4addr_ntoa(&ip));
-    return true;
+    return false;
 }
 
 iot_error_t iot_bsp_wifi_get_status(void)
