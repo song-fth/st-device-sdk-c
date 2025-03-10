@@ -45,7 +45,21 @@ else ifeq ($(CONFIG_STDK_IOT_CORE_BSP_SUPPORT_BL602),y)
 	COMPONENT_SRCDIRS += port/bsp/bl602
 	
 	COMPONENT_ADD_INCLUDEDIRS += include/bsp/bl602
-	
+	COMPONENT_SRCDIRS += deps/json/cJSON
+	COMPONENT_SRCDIRS += \
+	deps/libsodium/libsodium/src/libsodium/sodium \
+	deps/libsodium/libsodium/src/libsodium/crypto_sign \
+	deps/libsodium/libsodium/src/libsodium/crypto_sign/ed25519 \
+	deps/libsodium/libsodium/src/libsodium/crypto_sign/ed25519/ref10 \
+	deps/libsodium/libsodium/src/libsodium/crypto_hash/sha512/cp \
+	deps/libsodium/libsodium/src/libsodium/crypto_core/ed25519/ref10
+
+	COMPONENT_ADD_INCLUDEDIRS += deps/json/cJSON
+	COMPONENT_ADD_INCLUDEDIRS += deps/libsodium/libsodium/src/libsodium/include
+	COMPONENT_ADD_INCLUDEDIRS += deps/libsodium/port/include/sodium
+
+	CFLAGS += -I$(IOT_CORE_PATH)/src/deps/libsodium/port/include
+	CFLAGS += -I$(IOT_CORE_PATH)/src/deps/libsodium/libsodium/src/libsodium/include/sodium
 else ifeq ($(CONFIG_STDK_IOT_CORE_BSP_SUPPORT_TIZENRT),y)
 	COMPONENT_SRCDIRS += port/bsp/tizenrt
 	COMPONENT_ADD_INCLUDEDIRS += include/bsp/tizenrt
@@ -73,21 +87,7 @@ else
 endif
 
 COMPONENT_SRCDIRS += deps/cbor/tinycbor/src
-COMPONENT_SRCDIRS += deps/json/cJSON
-#src/deps/libsodium/libsodium/src/libsodium/crypto_sign/crypto_sign.c
-COMPONENT_SRCDIRS += \
-	deps/libsodium/libsodium/src/libsodium/sodium \
-	deps/libsodium/libsodium/src/libsodium/crypto_sign \
-	deps/libsodium/libsodium/src/libsodium/crypto_sign/ed25519 \
-	deps/libsodium/libsodium/src/libsodium/crypto_sign/ed25519/ref10 \
-	deps/libsodium/libsodium/src/libsodium/crypto_hash/sha512/cp \
-	deps/libsodium/libsodium/src/libsodium/crypto_core/ed25519/ref10
 COMPONENT_ADD_INCLUDEDIRS += deps/cbor/tinycbor/src
-COMPONENT_ADD_INCLUDEDIRS += deps/json/cJSON
-COMPONENT_ADD_INCLUDEDIRS += deps/libsodium/libsodium/src/libsodium/include
-COMPONENT_ADD_INCLUDEDIRS += deps/libsodium/port/include/sodium
-# $(info !_test $(COMPONENT_SRCDIRS))
-# $(info !---!!!!!!!!$(CONFIG_BT_CONN))
 
 COMPONENT_SRCDIRS += security
 COMPONENT_SRCDIRS += port/crypto/reference
@@ -100,7 +100,7 @@ endif
 COMPONENT_SRCDIRS += easysetup
 
 ifdef CONFIG_STDK_IOT_CORE_EASYSETUP_DISCOVERY_SSID
-CPPFLAGS += -DCONFIG_STDK_IOT_CORE_EASYSETUP_DISCOVERY_SSID
+#CPPFLAGS += -DCONFIG_STDK_IOT_CORE_EASYSETUP_DISCOVERY_SSID
 COMPONENT_SRCDIRS += easysetup/discovery/ssid
 endif
 
@@ -108,10 +108,10 @@ ifdef CONFIG_STDK_IOT_CORE_EASYSETUP_HTTP
 COMPONENT_SRCDIRS += easysetup/http
 endif
 
-#ifdef CONFIG_STDK_IOT_CORE_EASYSETUP_BLE
-#COMPONENT_SRCDIRS += easysetup/ble
-#COMPONENT_SRCDIRS += easysetup/discovery/advertiser
-#endif
+ifdef CONFIG_STDK_IOT_CORE_EASYSETUP_BLE
+COMPONENT_SRCDIRS += easysetup/ble
+COMPONENT_SRCDIRS += easysetup/discovery/advertiser
+endif
 
 ifdef CONFIG_STDK_IOT_CORE_EASYSETUP_X509
 	COMPONENT_SRCDIRS += easysetup/http/tls
@@ -120,20 +120,10 @@ else
 endif
 
 CPPFLAGS += -include $(IOT_CORE_PATH)/src/include/iot_common.h
-# CPPFLAGS += -include $(IOT_CORE_PATH)/src/deps/libsodium/libsodium/src/libsodium/include/sodium.h
-CFLAGS += -I$(IOT_CORE_PATH)/src/deps/libsodium/port/include
-CFLAGS += -I$(IOT_CORE_PATH)/src/deps/libsodium/libsodium/src/libsodium/include/sodium
-#COMPONENT_SRCDIRS = deps/libsodium/libsodium/src
+
 COMPONENT_SRCDIRS += mqtt/client mqtt/packet
 
-# $(info !----iot-core component src: $(COMPONENT_SRCDIRS))
-
-# $(info ==== CFLAGS ====)
-# $(info $(CFLAGS))
-
 CFLAGS += -std=c99
-# $(info ~`~`~`~`~`$(CPPFLAGS))
-# $(info ~`~`~`~`~`$(CFLAGS))
 else
 # Disable SmartThing Device SDK support
 COMPONENT_ADD_INCLUDEDIRS :=
