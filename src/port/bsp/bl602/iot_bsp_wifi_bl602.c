@@ -147,7 +147,6 @@ static void event_cb_wifi_event(input_event_t *event, void *private_data)
             wifi_mgmr_state_get(&state);
             if (state == WIFI_STATE_CONNECTED_IP_GOT) {
                 //do not need do anything
-                IOT_INFO("got ip but enter ap started");
             } else {
                 xEventGroupClearBits(wifi_event_group, WIFI_EVENT_BIT_ALL);
                 IOT_INFO("SYSTEM_EVENT_AP_START");
@@ -400,7 +399,6 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
         strncpy(bssid, (const char *)conf->bssid, sizeof(bssid) - 1);
         bssid_str_to_mac(mac, bssid, strlen(bssid));
         if (wifi_mgmr_sta_connect_mid(wifi_interface, ssid, password, NULL, mac, 0, 0, 1, WIFI_CONNECT_PMF_CAPABLE) == -1) {
-        //if (wifi_mgmr_sta_connect(wifi_interface, ssid, password, NULL, mac, 0, 0) == -1) {
             IOT_ERROR("Failed to connect");
             return IOT_ERROR_CONN_OPERATE_FAIL;
         }
@@ -408,9 +406,6 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
 				true, false, IOT_WIFI_CMD_TIMEOUT_BL602);
 		if((uxBits & WIFI_STA_CONNECT_BIT)) {
             wifi_mgmr_state_get(&state);
-            if (is_ap_started(state)) {
-                IOT_ERROR("Why ap started!!!!!!!!");
-            }
 			IOT_INFO("AP Connected");
 			IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_CONNECT_SUCCESS, 0, 0);
 		}

@@ -1,13 +1,12 @@
 #
 # Component Makefile
 #
-# $(info !!!!!![iot-core mk---])
 ifdef CONFIG_STDK_IOT_CORE
 
 COMPONENT_ADD_INCLUDEDIRS += include include/bsp include/os include/mqtt include/external include/port
 
 COMPONENT_SRCDIRS += ./
-# $(info !!!!!![iot-core mk] $(COMPONENT_SRCDIRS))
+
 ifeq ($(CONFIG_STDK_IOT_CORE_BSP_SUPPORT_ESP8266),y)
 	COMPONENT_SRCDIRS += port/bsp/esp8266
 	COMPONENT_ADD_INCLUDEDIRS += include/bsp/esp8266

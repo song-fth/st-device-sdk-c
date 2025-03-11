@@ -172,13 +172,13 @@ static void ble_bl_ccc_cfg_changed(const struct bt_gatt_attr *attr, u16_t vblfue
 	if (vblfue == BT_GATT_CCC_INDICATE)
 	{
 
-		printf("enable indicate.\n");
+		IOT_INFO("enable indicate.");
 		indicate_flag = true;
 
 	}
 	else
 	{
-		printf("disable indicate.\n");
+		IOT_INFO("disable indicate.");
 		indicate_flag = false;
 	}
 }
@@ -209,12 +209,12 @@ void set_advertise_mac_addr(uint8_t **mac)
 	bt_id_get(&macaddr, &count);
 	for (i = 0; i < BT_MAC_LENGTH; i++){
 		// u8_t temp = macaddr.a.val[i];
-		IOT_INFO("macaddr.a.val[%d]: %x\n", i, macaddr.a.val[i]);
+		IOT_INFO("macaddr.a.val[%d]: %x", i, macaddr.a.val[i]);
 	}
 	lmac = (uint8_t *)malloc(BT_MAC_LENGTH);
 	if (!lmac)
 	{
-		IOT_ERROR("failed to malloc for lmac\n");
+		IOT_ERROR("failed to malloc for lmac");
 		*mac = NULL;
 		return;
 	}
@@ -358,7 +358,7 @@ void iot_create_scan_response_packet(char *device_onboarding_id, char *serial)
 	}
 	display_serial[DISPLAY_SERIAL_NUMBER_SIZE] = '\0';
 #endif
-	printf("device_onboarding_id: %s \n",device_onboarding_id);
+	IOT_INFO("device_onboarding_id: %s",device_onboarding_id);
 	device_onboarding_id_len = (strlen(device_onboarding_id) > MAX_DEVICE_NAME_DATA_LEN) ? MAX_DEVICE_NAME_DATA_LEN : strlen(device_onboarding_id);
 
 	scan_response_data[count++] = device_onboarding_id_len + 1;
@@ -421,7 +421,7 @@ static void bt_gatt_indicate_cb(struct bt_conn *conn,
 					u8_t err)
 {
 	//add 
-	IOT_INFO("bt_gatt_indicate_cb entry");
+	//IOT_INFO("bt_gatt_indicate_cb entry");
 	indication_need_confirmed = 0;
 
 }
@@ -440,9 +440,8 @@ int iot_send_indication(uint8_t *buf, uint32_t len)
 				   };
 
 	gettimeofday(&start_tv, NULL);
-		IOT_INFO("iot_send_indication\n");
-
-			printf("indicate_need_confirmed = %d\n", indication_need_confirmed);
+		//IOT_INFO("iot_send_indication\n");
+	IOT_INFO("indicate_need_confirmed = %d", indication_need_confirmed);
 	while (indication_need_confirmed && gatt_connected)
 	{
 		// IOT_INFO("iot_send_indication");
@@ -470,13 +469,10 @@ int iot_send_indication(uint8_t *buf, uint32_t len)
 	
 	if (ble_bl_conn != NULL && indicate_flag == true)
 	{
-		printf("ble_bl_indicate_task.\n");
 		indication_need_confirmed = 1;
 		int err = bt_gatt_indicate(ble_bl_conn, &params);
-					IOT_INFO("bt_gatt_indicate: %d\n",err);
-					
 		if(err<0){
-			IOT_ERROR("bt_gatt_indicate: %d\n",err);
+			IOT_ERROR("bt_gatt_indicate: %d",err);
 		}
 	}
 
@@ -489,7 +485,6 @@ static int ble_blf_recv(struct bt_conn *conn,
 						const struct bt_gatt_attr *attr, const void *buf,
 						u16_t len, u16_t offset, u8_t flags)
 {
-	printf("Enter>>> Write handle\n");
 	uint8_t *recv_buffer;
 	recv_buffer = pvPortMalloc(sizeof(uint8_t) * len);
 	memcpy(recv_buffer, buf, len);
@@ -504,13 +499,12 @@ static int ble_blf_recv(struct bt_conn *conn,
 	return (int)len;
 }
 
-// struct bt_gatt_service ble_bl_server = BT_GATT_SERVICE(blattrs);
 
 int bleapps_adv_starting(void)
 {
 	int err;
 
-	IOT_INFO("Bluetooth Advertising start\n");
+	IOT_INFO("Bluetooth Advertising start");
 	struct bt_data ad[] = {
 	// BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_NO_BREDR)),
@@ -526,7 +520,7 @@ int bleapps_adv_starting(void)
 	err = bt_le_adv_start(BT_LE_ADV_CONN_NAME, ad, ARRAY_SIZE(ad), rsp, ARRAY_SIZE(rsp));
 	if (err)
 	{
-		IOT_ERROR("Advertising failed to start (err %d)\n", err);
+		IOT_ERROR("Advertising failed to start (err %d)", err);
 	}
 	return err;
 }
@@ -535,18 +529,18 @@ static void bt_ready(void)
 {
 
 	// bt_set_name("blf_602");
-	IOT_INFO("Bluetooth initiblfized\n");
+	IOT_INFO("Bluetooth initiblfized");
 	bleapps_adv_starting();
 }
 
 void bleapps_adv_stop(void)
 {
 	int err;
-	printf("Bluetooth Advertising stop\n");
+	printf("Bluetooth Advertising stop");
 	err = bt_le_adv_stop();
 	if (err)
 	{
-		printf("Advertising failed to stop (err %d)\n", err);
+		printf("Advertising failed to stop (err %d)", err);
 	}
 }
 
@@ -554,14 +548,14 @@ static void ble_app_init(int err)
 {
 	if (err != 0)
 	{
-		IOT_ERROR("BT FAILED started\n");
+		IOT_ERROR("BT FAILED started");
 	}
 	else
 	{
-		IOT_INFO("BT SUCCESS started\n");
+		IOT_INFO("BT SUCCESS started");
 		g_ble_status = BL_BLE_STATUS_INIT;
 		bt_ready();
-		IOT_INFO("BT SUCCESS started1\n");
+		IOT_INFO("BT SUCCESS started1");
 	}
 }
 
@@ -575,21 +569,21 @@ static void bl_connected(struct bt_conn *conn, uint8_t err)
 	int update_err;
 	if (err)
 	{
-		printf("Connection failed (err 0x%02x)\n", err);
+		IOT_ERROR("Connection failed (err 0x%02x)", err);
 	}
 	else
 	{
-		printf("Connected\n");
+		IOT_INFO("Connected");
 		ble_bl_conn = conn;
 		update_err = bt_conn_le_param_update(conn, &param);
 
 		if (update_err)
 		{
-			printf("conn update failed (err %d)\r\n", update_err);
+			IOT_ERROR("conn update failed (err %d)", update_err);
 		}
 		else
 		{
-			printf("conn update initiated\r\n");
+			IOT_ERROR("conn update initiated");
 		}
 		bleapps_adv_stop();
 		if (ble_event_cb)
@@ -603,7 +597,7 @@ static void bl_connected(struct bt_conn *conn, uint8_t err)
 
 static void bl_disconnected(struct bt_conn *conn, uint8_t reason)
 {
-	printf("Disconnected (reason 0x%02x)\n", reason);
+	IOT_INFO("Disconnected (reason 0x%02x)", reason);
 	/* Start ble advertisement only when onboarding is not completed */
 		bool onboarding_completed = iot_bsp_ble_get_onboarding_completion();
 		if (onboarding_completed == false) {
@@ -637,16 +631,14 @@ static void ble_stack_start(void)
 }
 #define sys_bitfield_test_bit(ptr, bit) ((*(ptr) & (1 << (bit))) != 0)
 void print_gatt_service_info(struct bt_gatt_service *svc) {
-    // 打印结构体地址
-    IOT_INFO("GATT Service address: %p\n", svc);
+    IOT_INFO("GATT Service address: %p", svc);
 
-    // 打印状态寄存器值
-	IOT_INFO("size_t value: %zu\n", &svc->attr_count);
-    IOT_INFO("Status register value: 0x%x\n", (unsigned int)sys_bitfield_test_bit((uint32_t *)&svc->node, 0));
+	IOT_INFO("size_t value: %zu", &svc->attr_count);
+    IOT_INFO("Status register value: 0x%x", (unsigned int)sys_bitfield_test_bit((uint32_t *)&svc->node, 0));
 }
 
 static void mtu_change_cb(struct bt_conn *conn, int mtu){
-	IOT_INFO("mtu change callback called, new mtu:%d\n", mtu);
+	IOT_INFO("mtu change callback called, new mtu:%d", mtu);
 	g_mtu = mtu;
 }
 void iot_bsp_ble_init(CharWriteCallback cb)
@@ -661,11 +653,10 @@ void iot_bsp_ble_init(CharWriteCallback cb)
 	CharWriteCb = cb;
 	if (g_ble_status == BL_BLE_STATUS_UNKNOWN)
 	{
-		//ble_controller_reset();这个函数没有实现，只有定义，需要咨询BL的人
+		//ble_controller_reset();unrealized
 	}
 
 	ble_stack_start();
-	IOT_INFO("TEST\n");
 	g_ble_status = BL_BLE_STATUS_INIT;
 
 	bt_conn_cb_register(&conn_callbacks);
@@ -673,20 +664,18 @@ void iot_bsp_ble_init(CharWriteCallback cb)
 	if (g_onboarding_complete == false)
 	{
 		//#if defined(CONFIG_BT_GATT_DYNAMIC_DB)
-			IOT_INFO("TEST\n");
-			print_gatt_service_info(&ble_bl_server);
-			err = bt_gatt_service_register(&ble_bl_server);IOT_INFO("TEST\n");
-			if (err == 0)
-			{
-				IOT_INFO("bt_gatt_service_register ok\n");
-			}
-			else
-			{
-				IOT_ERROR("bt_gatt_service_register err\n");
-				return;
-			}
+		print_gatt_service_info(&ble_bl_server);
+		err = bt_gatt_service_register(&ble_bl_server);
+		if (err == 0)
+		{
+			IOT_INFO("bt_gatt_service_register ok");
+		}
+		else
+		{
+			IOT_ERROR("bt_gatt_service_register err");
+			return;
+		}
 		//#endif
-		IOT_INFO("TEST\n");
 	}
 	bt_gatt_register_mtu_callback(mtu_change_cb);
 	g_mtu = GATTS_MTU_MAX;
@@ -698,10 +687,7 @@ void iot_bsp_ble_init(CharWriteCallback cb)
 iot_error_t iot_bsp_ble_register_event_cb(iot_bsp_ble_event_cb_t cb)
 {
 	if (cb == NULL)
-	{
 		return IOT_ERROR_INVALID_ARGS;
-	}
-
 	ble_event_cb = cb;
 	return IOT_ERROR_NONE;
 }
