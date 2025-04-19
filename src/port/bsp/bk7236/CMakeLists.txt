@@ -13,7 +13,7 @@ target_sources(iotcore
 	PUBLIC
 		iot_bsp_ble_bk7236.c
         )
-        target_link_libraries(iotcore PRIVATE armino::bt)
+        target_link_libraries(iotcore PRIVATE armino::bk_bluetooth)
 endif()
 
-target_link_libraries(iotcore PRIVATE armino::easy_flash armino::esp_partition armino::bk_wifi armino::json armino::nvs_flash armino::bootloader_support)
+target_link_libraries(iotcore PRIVATE armino::easy_flash armino::bk_wifi armino::json armino::lwip_intf_v2_1 armino::mbedtls)

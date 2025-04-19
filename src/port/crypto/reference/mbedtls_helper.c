@@ -16,6 +16,7 @@
  *
  ****************************************************************************/
 
+#include <stdio.h>
 #include "iot_debug.h"
 #include "mbedtls_helper.h"
 

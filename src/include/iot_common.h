@@ -19,6 +19,6 @@
 #ifndef _IOT_COMMON_H_
 #define _IOT_COMMON_H_
 
-#include "iot_bsp_custom.h"
+#include "bsp/bk7236/iot_bsp_custom.h"
 
 #endif /* _IOT_COMMON_H_ */

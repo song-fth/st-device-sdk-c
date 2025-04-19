@@ -53,6 +53,7 @@ if(CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_BUILD_TYPE MATCHES UnitTest)
 endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -include ${CMAKE_CURRENT_LIST_DIR}/include/iot_common.h")
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I ${CMAKE_CURRENT_LIST_DIR}/../../bsp/bk7236/components/lwip_intf_v2_1/lwip-2.1.2/src/include/compat/posix/")
 
 add_library(iotcore
         iot_api.c
@@ -70,7 +71,8 @@ add_library(iotcore
 foreach(TMP_DIR ${STDK_SRC_PATH})
     add_subdirectory(${TMP_DIR})
 endforeach()
-
+message("tell me why")
+message("~~~~~~ ${STDK_INCLUDE_PATH}")
 target_include_directories(iotcore
         PRIVATE
         include/os

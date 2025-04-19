@@ -19,6 +19,7 @@
 #include "iot_debug.h"
 #include "port_net.h"
 
+//#include "/home/songzh/share/stdk/BK/porting/0317/st-device-sdk-c-ref/bsp/bk7236/components/lwip_intf_v2_1/lwip-2.1.2/src/include/compat/posix/sys/socket.h"
 #include <sys/socket.h>
 #include <errno.h>
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
