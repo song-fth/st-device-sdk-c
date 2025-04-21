@@ -18,12 +18,13 @@
 
 #include <string.h>
 #include <time.h>
+#include "FreeRTOS.h"
 #include "event_groups.h"
 #include "wifi.h"
 #include "wifi_types.h"
 #include "bk_wifi_types.h"
-#include "netif_types.h"
-#include <components/system.h>
+#include <modules/wifi.h>
+#include <components/netif.h>
 #include <components/event.h>
 #include "iot_debug.h"
 #include "iot_bsp_wifi.h"
@@ -48,12 +49,12 @@ static EventGroupHandle_t wifi_event_group;
 static iot_bsp_wifi_event_cb_t wifi_event_cb;
 static bool s_wifi_connect_timeout = false;
 static iot_error_t s_latest_disconnect_reason;
-
+/*
 typedef enum
 {
-	EVENT_WIFI_INIT_DONE /**< WiFi initialization done event */
+	EVENT_WIFI_INIT_DONE
 } wifi_event_t;
-
+*/
 static void _initialize_sntp(void)
 {
 	IOT_INFO("Initializing SNTP");
@@ -103,7 +104,7 @@ static void _obtain_time(void)
 	}
 }
 
-static void event_cb_wifi_event(void *arg, event_module_t event_module, int event_id, void *event_data)
+static void bk_wifi_event_post_to_user(void *arg, event_module_t event_module, int event_id, void *event_data)
 {
 	wifi_event_sta_disconnected_t *sta_disconnected;
 	wifi_event_sta_connected_t *sta_connected;
@@ -146,12 +147,12 @@ static void event_cb_wifi_event(void *arg, event_module_t event_module, int even
 	}
 }
 
-static void event_cb_netif_event(void *arg, event_module_t event_module, int event_id, void *event_data)
+static int bk_ip_event_post_to_user(void *arg, event_module_t event_module,
+					   int event_id, void *event_data)
 {
 	netif_event_got_ip4_t *got_ip;
 
-	switch (event_id)
-	{
+	switch (event_id) {
 	case EVENT_NETIF_GOT_IP4:
 		got_ip = (netif_event_got_ip4_t *)event_data;
 		BK_LOGI(TAG, "%s got ip\n", got_ip->netif_if == NETIF_IF_STA ? "STA" : "unknown netif");
@@ -160,6 +161,24 @@ static void event_cb_netif_event(void *arg, event_module_t event_module, int eve
 		BK_LOGI(TAG, "rx event <%d %d>\n", event_module, event_id);
 		break;
 	}
+
+	return BK_OK;
+}
+
+static bk_err_t bk_event_handler_init(void)
+{
+	bk_err_t ret = BK_OK;
+	ret = bk_event_register_cb(EVENT_MOD_WIFI, EVENT_ID_ALL, bk_wifi_event_post_to_user, NULL);
+	if (ret != BK_OK) {
+		IOT_ERROR("Failed to register bk wifi event callback");
+		return ret;
+	}
+	ret = bk_event_register_cb(EVENT_MOD_NETIF, EVENT_ID_ALL, bk_ip_event_post_to_user, NULL);
+	if (ret != BK_OK) {
+		IOT_ERROR("Failed to register bk ip event callback");
+		return ret;
+	}
+	return ret;
 }
 
 iot_error_t iot_bsp_wifi_init()
@@ -171,43 +190,40 @@ iot_error_t iot_bsp_wifi_init()
 
 	if (WIFI_INITIALIZED)
 		return IOT_ERROR_NONE;
-
-	wifi_event_group = xEventGroupCreate();
-	bk_ret = bk_event_register_cb(EVENT_MOD_WIFI, EVENT_ID_ALL, event_cb_wifi_event, NULL);
-	if (bk_ret != BK_OK)
-	{
-		IOT_ERROR("Failed to register WiFi event callback");
-		return IOT_ERROR_INIT_FAIL;
-	}
-
 	wifi_init_config_t wifi_config = WIFI_DEFAULT_INIT_CONFIG();
-
-	if (bk_event_init(&wifi_config) != BK_OK)
-	{
+	bk_ret = bk_event_init();
+	if (bk_ret != BK_OK) {
+		IOT_ERROR("bk_event_init failed err=[%d]", bk_ret);
+		IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_INIT_FAIL, bk_ret, __LINE__);
 		return IOT_ERROR_INIT_FAIL;
 	}
 
-	if (bk_netif_init(&wifi_config) != BK_OK)
-	{
+	bk_ret = bk_netif_init();
+	if (bk_ret != BK_OK) {
+		IOT_ERROR("bk_netif_init failed err=[%d]", bk_ret);
+		IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_INIT_FAIL, bk_ret, __LINE__);
 		return IOT_ERROR_INIT_FAIL;
 	}
 
-	if (bk_wifi_init(&wifi_config) != BK_OK)
-	{
+	bk_ret = bk_wifi_init(&wifi_config);
+	if (bk_ret != BK_OK) {
+		IOT_ERROR("bk_wifi_init failed err=[%d]", bk_ret);
+		IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_INIT_FAIL, bk_ret, __LINE__);
 		return IOT_ERROR_INIT_FAIL;
 	}
 
-	uxBits = xEventGroupWaitBits(wifi_event_group, WIFI_INIT_BIT,
-								 true, false, IOT_WIFI_CMD_TIMEOUT);
-
-	if (uxBits & WIFI_INIT_BIT)
-	{
-		WIFI_INITIALIZED = true;
-		IOT_INFO("[bk7236] iot_bsp_wifi_init done");
-		IOT_DUMP(IOT_DEBUG_LEVEL_DEBUG, IOT_DUMP_BSP_WIFI_INIT_SUCCESS, 0, 0);
-		return IOT_ERROR_NONE;
+	bk_ret = bk_event_handler_init();
+	if (bk_ret != BK_OK) {
+		IOT_ERROR("bk_event_handler_init failed err=[%d]", bk_ret);
+		IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_INIT_FAIL, bk_ret, __LINE__);
+		return IOT_ERROR_INIT_FAIL;
 	}
-	return IOT_ERROR_INIT_FAIL;
+
+	WIFI_INITIALIZED = true;
+	IOT_INFO("[bk7236] iot_bsp_wifi_init done");
+	IOT_DUMP(IOT_DEBUG_LEVEL_DEBUG, IOT_DUMP_BSP_WIFI_INIT_SUCCESS, 0, 0);
+
+	return IOT_ERROR_NONE;
 }
 
 iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
@@ -220,29 +236,21 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
 	switch (conf->mode)
 	{
 	case IOT_WIFI_MODE_OFF:
-		uxBits = xEventGroupGetBits(wifi_event_group);
-		if (uxBits & (WIFI_STA_CONNECT_BIT | WIFI_AP_CONNECT_BIT))
-		{
-			IOT_INFO("Disconnecting from AP/STA");
-			bk_wifi_sta_disconnect();
-			bk_wifi_ap_stop();
-
-			uxBits = xEventGroupWaitBits(wifi_event_group, WIFI_STA_DISCONNECT_BIT | WIFI_AP_DISCONNECT_BIT,
-										 true, true, IOT_WIFI_CMD_TIMEOUT);
-			if ((uxBits & WIFI_STA_DISCONNECT_BIT) && (uxBits & WIFI_AP_DISCONNECT_BIT))
-			{
-				IOT_INFO("STA and AP disconnected");
-			}
-			else
-			{
-				IOT_ERROR("WIFI_STA_DISCONNECT_BIT or WIFI_AP_DISCONNECTED_BIT event Timeout");
-				IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_TIMEOUT, conf->mode, __LINE__);
+		if (wifi_sta_is_started()) {
+			bk_ret = bk_wifi_sta_stop();
+			if (bk_ret != BK_OK) {
+				IOT_ERROR("bk_wifi_sta_stop failed err=[%d]", bk_ret);
+				IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_SETMODE_FAIL, conf->mode, bk_ret);
 				return IOT_ERROR_CONN_OPERATE_FAIL;
 			}
 		}
-		else
-		{
-			IOT_INFO("No active connection, turning off WiFi");
+		if (wifi_ap_is_started()) {
+			bk_ret = bk_wifi_ap_stop();
+			if (bk_ret != BK_OK) {
+				IOT_ERROR("bk_wifi_ap_stop failed err=[%d]", bk_ret);
+				IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_SETMODE_FAIL, conf->mode, bk_ret);
+				return IOT_ERROR_CONN_OPERATE_FAIL;
+			}
 		}
 		break;
 	case IOT_WIFI_MODE_SCAN:
@@ -279,8 +287,20 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
 		}
 		break;
 	case IOT_WIFI_MODE_STATION:
-		bk_wifi_sta_set_config(conf->ssid, conf->password, conf->bssid);
+		if (wifi_ap_is_started()) {
+			bk_ret = bk_wifi_ap_stop();
+			if (bk_ret != BK_OK) {
+				IOT_ERROR("bk_wifi_ap_stop failed err=[%d]", bk_ret);
+				IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_SETMODE_FAIL, conf->mode, bk_ret);
+				return IOT_ERROR_CONN_OPERATE_FAIL;
+			}
+		}
+		wifi_sta_config_t sta_config = {0};
+		os_strcpy(sta_config.ssid, conf->ssid);
+		os_strcpy(sta_config.password, conf->pass);
+		os_strcpy(sta_config.bssid, conf->bssid);
 
+		bk_wifi_sta_set_config(&sta_config);
 		bk_wifi_sta_start();
 
 		uxBits = xEventGroupWaitBits(wifi_event_group, WIFI_STA_CONNECT_BIT,
