@@ -15,7 +15,7 @@
  * language governing permissions and limitations under the License.
  *
  ****************************************************************************/
-
+#include <stdio.h>
 #include <string.h>
 #include <time.h>
 #include "FreeRTOS.h"
@@ -207,33 +207,33 @@ iot_error_t iot_bsp_wifi_init()
 {
 	bk_err_t bk_ret;
 	EventBits_t uxBits = 0;
-
 	IOT_INFO("[bk7236] iot_bsp_wifi_init");
-
+	
 	if (WIFI_INITIALIZED)
 		return IOT_ERROR_NONE;
-	wifi_init_config_t wifi_config = WIFI_DEFAULT_INIT_CONFIG();
+	/*wifi_init_config_t wifi_config = WIFI_DEFAULT_INIT_CONFIG();
 	bk_ret = bk_event_init();
 	if (bk_ret != BK_OK) {
 		IOT_ERROR("bk_event_init failed err=[%d]", bk_ret);
 		IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_INIT_FAIL, bk_ret, __LINE__);
 		return IOT_ERROR_INIT_FAIL;
 	}
-
+	printf("ready to call bk_netif_init\r\n");
 	bk_ret = bk_netif_init();
 	if (bk_ret != BK_OK) {
 		IOT_ERROR("bk_netif_init failed err=[%d]", bk_ret);
 		IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_INIT_FAIL, bk_ret, __LINE__);
 		return IOT_ERROR_INIT_FAIL;
 	}
-
+	
 	bk_ret = bk_wifi_init(&wifi_config);
 	if (bk_ret != BK_OK) {
 		IOT_ERROR("bk_wifi_init failed err=[%d]", bk_ret);
 		IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_INIT_FAIL, bk_ret, __LINE__);
 		return IOT_ERROR_INIT_FAIL;
 	}
-
+*/
+	wifi_event_group = xEventGroupCreate();
 	bk_ret = bk_event_handler_init();
 	if (bk_ret != BK_OK) {
 		IOT_ERROR("bk_event_handler_init failed err=[%d]", bk_ret);
@@ -278,7 +278,9 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
 		}
 		break;
 	case IOT_WIFI_MODE_SCAN:
+		printf("[%s][%d][Wifi debug]wifi scan case: entering\r\n", __func__, __LINE__);
 		if (wifi_ap_is_started()) {
+			printf("[%s][%d][Wifi debug]wifi scan case: if ap\r\n", __func__, __LINE__);
 			bk_ret = bk_wifi_ap_stop();
 			if (bk_ret != BK_OK) {
 				IOT_ERROR("bk_wifi_ap_stop failed err=[%d]", bk_ret);
@@ -290,6 +292,7 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
 		 * disconnect or connect event before start scan to prevent scan rejection.
 		 */
 		if (s_wifi_connect_timeout == true) {
+			printf("[%s][%d][Wifi debug]wifi scan case: if timeout\r\n", __func__, __LINE__);
 			xEventGroupClearBits(wifi_event_group, WIFI_STA_CONNECT_BIT | WIFI_STA_DISCONNECT_BIT);
 
 			uxBits = xEventGroupWaitBits(wifi_event_group,
@@ -344,6 +347,12 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
 	case IOT_WIFI_MODE_SOFTAP:
 		str_len = strlen(conf->ssid);
 		wifi_ap_config_t ap_config = {0};
+		netif_ip4_config_t ip4_config = {0};
+		strncpy(ip4_config.ip, WLAN_DEFAULT_IP, NETIF_IP4_STR_LEN);
+		strncpy(ip4_config.mask, WLAN_DEFAULT_MASK, NETIF_IP4_STR_LEN);
+		strncpy(ip4_config.gateway, WLAN_DEFAULT_GW, NETIF_IP4_STR_LEN);
+		strncpy(ip4_config.dns, WLAN_DEFAULT_GW, NETIF_IP4_STR_LEN);
+		BK_RETURN_ON_ERR(bk_netif_set_ip4_config(NETIF_IF_AP, &ip4_config));
 		memcpy(ap_config.ssid, conf->ssid, (str_len > IOT_WIFI_MAX_SSID_LEN) ? IOT_WIFI_MAX_SSID_LEN : str_len);
 
 		str_len =  strlen(conf->pass);
@@ -358,7 +367,7 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
 			ap_config.security = WIFI_SECURITY_NONE;
 		}
 		else{
-			ap_config.security = WIFI_SECURITY_WPA2_MIXED;
+			ap_config.security = WIFI_SECURITY_TYPE_WAPI_PSK;
 		}
 
 		BK_LOG_ON_ERR(bk_wifi_ap_set_config(&ap_config));
@@ -396,12 +405,13 @@ uint16_t iot_bsp_wifi_get_scan_result(iot_wifi_scan_result_t *scan_result)
 
 	memset(&result, 0x0, sizeof(result));
 
-	
+	printf("[%s][%d][Wifi debug]ready to call bk_wifi_scan_start\r\n", __func__, __LINE__);
 	bk_wifi_scan_start(NULL);
+	printf("[%s][%d][Wifi debug]called bk_wifi_scan_start\r\n", __func__, __LINE__);
 
 	uxBits = xEventGroupWaitBits(wifi_event_group, WIFI_SCAN_DONE_BIT,
 								 true, false, IOT_WIFI_CMD_TIMEOUT);
-
+	printf("[%s][%d][Wifi debug]after calling xEventGroupWaitBits\r\n", __func__, __LINE__);
 	if (!(uxBits & WIFI_SCAN_DONE_BIT))
 	{
 		IOT_ERROR("Scan timeout");
