@@ -25,7 +25,7 @@ if(CONFIG_STDK_IOT_CORE)
 			deps/libsodium/libsodium/src/libsodium/include/sodium
 			deps/libsodium/port/include
 		)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-variable")
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-variable -Wno-unused-but-set-variable")
 	else()
 		set(STDK_SRC_PATH "${STDK_SRC_PATH}" port/bsp/posix)
 		set(STDK_INCLUDE_PATH "${STDK_INCLUDE_PATH}" include/bsp/posix)
