@@ -52,6 +52,7 @@ static EventGroupHandle_t wifi_event_group;
 static iot_bsp_wifi_event_cb_t wifi_event_cb;
 static bool s_wifi_connect_timeout = false;
 static iot_error_t s_latest_disconnect_reason;
+static bool gotIP = false;
 /*
 typedef enum
 {
@@ -127,6 +128,7 @@ static bk_err_t bk_wifi_event_post_to_user(void *arg, event_module_t event_modul
 		//xEventGroupSetBits(wifi_event_group, WIFI_STA_CONNECT_BIT);
 		break;
 	case EVENT_WIFI_STA_DISCONNECTED:
+		gotIP = false;
 		sta_disconnected = (wifi_event_sta_disconnected_t *)event_data;
 		//BK_LOGI(TAG, "STA disconnected, reason(%d)\n", sta_disconnected->disconnect_reason);
 		IOT_INFO("STA disconnected, reason(%d)",sta_disconnected->disconnect_reason);
@@ -179,6 +181,7 @@ static bk_err_t bk_ip_event_post_to_user(void *arg, event_module_t event_module,
 	case EVENT_NETIF_GOT_IP4:
 		got_ip = (netif_event_got_ip4_t *)event_data;
 		s_wifi_connect_timeout = false;
+		gotIP = true;
 		xEventGroupSetBits(wifi_event_group, WIFI_STA_CONNECT_BIT);
 		xEventGroupClearBits(wifi_event_group, WIFI_STA_DISCONNECT_BIT);
 		BK_LOGI(TAG, "%s got ip\n", got_ip->netif_if == NETIF_IF_STA ? "STA" : "unknown netif");
@@ -537,11 +540,17 @@ bool iot_bsp_wifi_is_dhcp_success()
 {
 	netif_ip4_config_t config;
 
-	if (bk_netif_get_ip4_config(NETIF_IF_STA, &config) != BK_OK || memcmp(config.ip, BK_STR_NULL_IP, strlen(BK_STR_NULL_IP)) != 0)
-		return false;
+	//if (bk_netif_get_ip4_config(NETIF_IF_STA, &config) != BK_OK || memcmp(config.ip, BK_STR_NULL_IP, strlen(BK_STR_NULL_IP)) != 0)
+	//	return false;
+	//EventBits_t uxBits = 0;
+	//uxBits = xEventGroupWaitBits(wifi_event_group, WIFI_STA_CONNECT_BIT,
+	//								 true, false, IOT_WIFI_CMD_TIMEOUT);
+	if(gotIP) {
+		return true;
+	}
 
 	IOT_INFO("IP address: %s", config.ip);
-	return true;
+	return false;
 }
 
 
