@@ -24,6 +24,7 @@
 #include "iot_bsp_random.h"
 #include "iot_debug.h"
 #include "security/iot_security_util.h"
+#include <driver/aon_rtc.h>
 
 iot_error_t iot_get_random_uuid_from_mac(struct iot_uuid *uuid)
 {
@@ -46,7 +47,7 @@ iot_error_t iot_get_random_uuid_from_mac(struct iot_uuid *uuid)
 		return err;
 	}
 
-	ret = gettimeofday(&tv, NULL);
+	ret = bk_rtc_gettimeofday(&tv, NULL);
 	if (ret) {
 		IOT_ERROR("gettimeofday failed, ret = %d", ret);
 		return IOT_ERROR_UUID_FAIL;
