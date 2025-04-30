@@ -23,13 +23,14 @@
 
 unsigned int iot_bsp_random()
 {
-	int ret;
+	/*int ret;
 	ret = bk_rand();
 	if (0 != ret) {
         IOT_ERROR("rng read error\r\n");
 		return IOT_ERROR_INVALID_ARGS;
     }
-	return ret;
+	return ret;*/
+	return bk_rand();
 }
 
 
