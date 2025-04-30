@@ -10,7 +10,7 @@ target_sources(iotcore
 
 if(CONFIG_STDK_IOT_CORE_EASYSETUP_BLE)
 target_sources(iotcore
-	PUBLIC
+	PRIVATE
 		iot_bsp_ble_bk7236.c
         )
         target_link_libraries(iotcore PRIVATE armino::bk_bluetooth)
