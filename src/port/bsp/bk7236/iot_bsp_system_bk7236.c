@@ -32,15 +32,15 @@ const char* iot_bsp_get_bsp_version_string()
 	return "";
 }
 
-void iot_bl_system_reboot()
+void iot_bsp_system_reboot()
 {
     // Disable scheduler on this core.
 	bk_reboot();
 }
 
-void iot_bl_system_poweroff()
+void iot_bsp_system_poweroff()
 {
-	iot_bl_system_reboot(); // no poweroff feature.
+	iot_bsp_system_reboot(); // no poweroff feature.
 }
 
 
@@ -64,3 +64,7 @@ iot_error_t iot_bsp_system_set_time_in_sec(const char* time_in_sec)
 	return IOT_ERROR_NONE;
 }
 
+int __wrap_gettimeofday(struct timeval *tp, struct timezone *tz)
+{
+	return bk_rtc_gettimeofday(tp, tz);
+}
