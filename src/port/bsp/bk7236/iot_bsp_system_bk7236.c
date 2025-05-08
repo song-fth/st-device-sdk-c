@@ -64,7 +64,10 @@ iot_error_t iot_bsp_system_set_time_in_sec(const char* time_in_sec)
 	return IOT_ERROR_NONE;
 }
 
-int __wrap_gettimeofday(struct timeval *tp, struct timezone *tz)
+int __wrap_gettimeofday(struct timeval *tv, struct timezone *tz)
 {
-	return bk_rtc_gettimeofday(tp, tz);
+	return bk_rtc_gettimeofday(tv, tz);
 }
+
+__attribute__((alias("__wrap_gettimeofday")))
+int gettimeofday(struct timeval*, void*);

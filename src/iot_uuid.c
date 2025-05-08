@@ -47,7 +47,7 @@ iot_error_t iot_get_random_uuid_from_mac(struct iot_uuid *uuid)
 		return err;
 	}
 
-	ret = bk_rtc_gettimeofday(&tv, NULL);
+	ret = gettimeofday(&tv, NULL);
 	if (ret) {
 		IOT_ERROR("gettimeofday failed, ret = %d", ret);
 		return IOT_ERROR_UUID_FAIL;

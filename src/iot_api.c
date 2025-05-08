@@ -670,8 +670,8 @@ iot_error_t iot_get_time_in_sec(char *buf, size_t buf_len)
 		return IOT_ERROR_INVALID_ARGS;
 	}
 
-	//gettimeofday(&tv_now, NULL);
-	bk_rtc_gettimeofday(&tv_now, NULL);
+	gettimeofday(&tv_now, NULL);
+	//bk_rtc_gettimeofday(&tv_now, NULL);
 	snprintf(buf, buf_len, "%lld", (long long)tv_now.tv_sec);
 
 	return IOT_ERROR_NONE;
