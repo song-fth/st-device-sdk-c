@@ -95,11 +95,9 @@ void iot_bsp_debug_check_heap(const char* tag, const char* func, const int line,
 {
 	static int count = 0;
 	char buf[BUF_SIZE] = {0,};
-	//int ret;
 	va_list va;
 
 	va_start(va, fmt);
-	//ret = vsnprintf(buf, BUF_SIZE, fmt, va);
 	vsnprintf(buf, BUF_SIZE, fmt, va);
 	va_end(va);
 

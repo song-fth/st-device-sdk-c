@@ -66,8 +66,6 @@ iot_error_t iot_bsp_fs_deinit()
 
 iot_error_t iot_bsp_fs_open(const char* filename, iot_bsp_fs_open_mode_t mode, iot_bsp_fs_handle_t* handle)
 {
-        //iot_bsp_fs_open_mode_t flag = mode;
-
         if (NULL == filename) {
                 IOT_DEBUG("filename is NULL,open failed");
                 return IOT_ERROR_INVALID_ARGS;
