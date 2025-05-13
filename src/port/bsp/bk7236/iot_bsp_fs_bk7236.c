@@ -119,18 +119,15 @@ iot_error_t iot_bsp_fs_write(iot_bsp_fs_handle_t handle, const char* data, unsig
 
 iot_error_t iot_bsp_fs_remove(const char* filename)
 {
-	int ret;
+	EfErrCode ret;
     if (NULL == filename) {
 		IOT_DEBUG("filename is NULL,remove failed");
 		return IOT_ERROR_INVALID_ARGS;
 	}
 	ret = ef_del_env(filename);
-	if (0 != ret) {
+	if (ret != EF_NO_ERR) {
 		IOT_DEBUG("remove file failed");
-		return IOT_ERROR_FS_REMOVE_FAIL;
+		return ret == EF_ENV_NAME_ERR ? IOT_ERROR_FS_NO_FILE : IOT_ERROR_FS_REMOVE_FAIL;
 	}
 	return IOT_ERROR_NONE;
 }
-
-
-

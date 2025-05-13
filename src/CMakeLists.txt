@@ -71,8 +71,7 @@ add_library(iotcore
 foreach(TMP_DIR ${STDK_SRC_PATH})
     add_subdirectory(${TMP_DIR})
 endforeach()
-message("tell me why")
-message("~~~~~~ ${STDK_INCLUDE_PATH}")
+
 target_include_directories(iotcore
         PRIVATE
         include/os
