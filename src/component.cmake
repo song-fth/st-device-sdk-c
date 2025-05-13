@@ -1,7 +1,6 @@
 #
 # Component Cmake
 #
-message("Enter component.cmake")
 
 if(CONFIG_STDK_IOT_CORE)
 	set(STDK_INCLUDE_PATH "${STDK_INCLUDE_PATH}" include include/bsp include/os include/mqtt)
@@ -12,6 +11,19 @@ if(CONFIG_STDK_IOT_CORE)
 			CONFIG_STDK_IOT_CORE_BSP_SUPPORT_ESP32C3)
 		set(STDK_SRC_PATH "${STDK_SRC_PATH}" port/bsp/esp32)
 		set(STDK_INCLUDE_PATH "${STDK_INCLUDE_PATH}" include/bsp/esp32)
+	elseif(CONFIG_STDK_IOT_CORE_BSP_SUPPORT_BK7236)
+		set(STDK_SRC_PATH "${STDK_SRC_PATH}"
+			port/bsp/bk7236
+			deps/libsodium
+		)
+		set(STDK_INCLUDE_PATH "${STDK_INCLUDE_PATH}"
+			include/bsp/bk7236
+			deps/libsodium/port/include/sodium
+			deps/libsodium/libsodium/src/libsodium/include
+			deps/libsodium/libsodium/src/libsodium/include/sodium
+			deps/libsodium/port/include
+		)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-variable -Wno-unused-but-set-variable")
 	else()
 		set(STDK_SRC_PATH "${STDK_SRC_PATH}" port/bsp/posix)
 		set(STDK_INCLUDE_PATH "${STDK_INCLUDE_PATH}" include/bsp/posix)

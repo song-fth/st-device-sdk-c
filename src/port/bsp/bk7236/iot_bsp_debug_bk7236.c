@@ -37,11 +37,11 @@ static const uint32_t s_log_color [IOT_DEBUG_LEVEL_MAX]= {
 	0,  //IOT_DEBUG_LEVEL_DEBUG
 };
 
-static void get_current_time_in_s(time_t time) 
+static void get_current_time_in_s(time_t *vTime)
 {
-	struct timeval tv = {0,};
-	bk_rtc_gettimeofday(&tv, NULL);
-	time = tv.tv_sec;
+	struct timeval tv = {0,0};
+	bk_rtc_gettimeofday(&tv, 0);
+	*vTime = tv.tv_sec;
 }
 
 void iot_bsp_debug(iot_debug_level_t level, const char* tag, const char* fmt, ...)
@@ -49,7 +49,7 @@ void iot_bsp_debug(iot_debug_level_t level, const char* tag, const char* fmt, ..
 	va_list va;
 	char buf[BUF_SIZE] = {0,};
 	char buffer[64] = {0};
-	time_t time = 0;
+	time_t bkTime = 0;
 	uint32_t color = s_log_color[level];
 
 	va_start(va, fmt);
@@ -57,8 +57,8 @@ void iot_bsp_debug(iot_debug_level_t level, const char* tag, const char* fmt, ..
 	va_end(va);
 	
 	
-	get_current_time_in_s(time);
-	ctime_r(&time, buffer);
+	get_current_time_in_s(&bkTime);
+	ctime_r(&bkTime, buffer);
 	char date[64] = {0};
 	strncpy(date, buffer, strlen(buffer)-1);
 
@@ -95,11 +95,10 @@ void iot_bsp_debug_check_heap(const char* tag, const char* func, const int line,
 {
 	static int count = 0;
 	char buf[BUF_SIZE] = {0,};
-	int ret;
 	va_list va;
 
 	va_start(va, fmt);
-	ret = vsnprintf(buf, BUF_SIZE, fmt, va);
+	vsnprintf(buf, BUF_SIZE, fmt, va);
 	va_end(va);
 
 	if (count == 0) {

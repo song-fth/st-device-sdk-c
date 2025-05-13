@@ -33,6 +33,7 @@
 #include "security/iot_security_common.h"
 #include "security/iot_security_util.h"
 #include "iot_bsp_system.h"
+#include <driver/aon_rtc.h>
 
 #include "JSON.h"
 #define ONBOARDINGID_E4_MAX_LEN	13
@@ -131,7 +132,6 @@ iot_error_t iot_wifi_ctrl_request(struct iot_context *ctx,
 			}
 			memset(ctx->scan_result, 0x0, (IOT_WIFI_MAX_SCAN_RESULT * sizeof(iot_wifi_scan_result_t)));
 		}
-
 		ctx->scan_num = iot_bsp_wifi_get_scan_result(ctx->scan_result);
 		break;
 
@@ -671,6 +671,7 @@ iot_error_t iot_get_time_in_sec(char *buf, size_t buf_len)
 	}
 
 	gettimeofday(&tv_now, NULL);
+	//bk_rtc_gettimeofday(&tv_now, NULL);
 	snprintf(buf, buf_len, "%lld", (long long)tv_now.tv_sec);
 
 	return IOT_ERROR_NONE;

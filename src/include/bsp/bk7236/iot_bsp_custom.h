@@ -16,9 +16,9 @@
  *
  ****************************************************************************/
 
-#ifndef _IOT_COMMON_H_
-#define _IOT_COMMON_H_
+#ifndef _IOT_BSP_CUSTOM_H_
+#define _IOT_BSP_CUSTOM_H_
 
-#include "bsp/bk7236/iot_bsp_custom.h"
+#include "sdkconfig.h"
 
-#endif /* _IOT_COMMON_H_ */
+#endif /* _IOT_BSP_CUSTOM_H_ */
