@@ -22,9 +22,6 @@
 #include <sys/time.h>
 #include <os/os.h>
 #include <os/mem.h>
-
-// #include <stdio.h>
-// #include <stdint.h>
 #include <stdarg.h>
 #include <time.h>
 #include <sys/time.h>
@@ -263,7 +260,7 @@ void iot_create_advertise_packet(char *mnid, char *setupid, char *serial)
 	adv_data_mac_address_offset = count;
 	count += MAC_ADD_COUNT;
 	set_advertise_mac_addr(&mac);
-IOT_INFO("1111111111111111111\n");
+
 	adv_data[count++] = CUSTOM_DATA_LEN;
 	adv_data[count++] = CUSTOM_TYPE;
 	adv_data[count++] = CUSTOM_TYPE_DATA_LEN;
@@ -272,7 +269,7 @@ IOT_INFO("1111111111111111111\n");
 #else
 	adv_data[count++] = hybrid_serial[0];
 #endif
-IOT_INFO("1111111111111111111\n");
+
 	adv_data_len = count;
 
 	IOT_INFO("adv_data_len : %d\n",count);
@@ -282,7 +279,6 @@ IOT_INFO("1111111111111111111\n");
 		IOT_INFO("0x%x,  ", adv_data[i]);
 	}
 	IOT_INFO("\n");
-	IOT_INFO("1111111111111111111\n");
 }
 
 

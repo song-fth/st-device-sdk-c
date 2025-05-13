@@ -35,14 +35,11 @@
 #include "lwip/apps/sntp.h"
 #include "lwip/inet.h"
 
-#define TAG "example"
+#define TAG "BK_WiFi"
 #define BK_STR_NULL_IP "0.0.0.0"
 
-//const int WIFI_INIT_BIT = 1 << 0;
 const int WIFI_STA_CONNECT_BIT = 1 << 0;
 const int WIFI_STA_DISCONNECT_BIT = 1 << 1;
-//const int WIFI_AP_CONNECT_BIT = 1 << 3;
-//const int WIFI_AP_DISCONNECT_BIT = 1 << 4;
 const int WIFI_SCAN_DONE_BIT = 1 << 2;
 
 const int WIFI_EVENT_BIT_ALL = WIFI_STA_CONNECT_BIT | WIFI_STA_DISCONNECT_BIT | WIFI_SCAN_DONE_BIT;
@@ -53,62 +50,7 @@ static iot_bsp_wifi_event_cb_t wifi_event_cb;
 static bool s_wifi_connect_timeout = false;
 static iot_error_t s_latest_disconnect_reason;
 static bool gotIP = false;
-/*
-typedef enum
-{
-	EVENT_WIFI_INIT_DONE
-} wifi_event_t;
-*/
-/*
-static void _initialize_sntp(void)
-{
-	IOT_INFO("Initializing SNTP");
-	if (sntp_enabled())
-	{
-		IOT_INFO("SNTP is already working, STOP it first");
-		sntp_stop();
-	}
 
-	sntp_setoperatingmode(SNTP_OPMODE_POLL);
-	sntp_setservername(0, "pool.ntp.org");
-	sntp_setservername(1, "1.kr.pool.ntp.org");
-	sntp_setservername(2, "1.asia.pool.ntp.org");
-	sntp_setservername(3, "us.pool.ntp.org");
-	sntp_setservername(4, "1.cn.pool.ntp.org");
-	sntp_setservername(5, "1.hk.pool.ntp.org");
-	sntp_setservername(6, "europe.pool.ntp.org");
-	sntp_setservername(7, "time1.google.com");
-
-	sntp_init();
-}
-
-static void _obtain_time(void)
-{
-	time_t now = 0;
-	struct tm timeinfo = {0};
-	int retry = 0;
-	const int retry_count = 10;
-
-	_initialize_sntp();
-
-	while (timeinfo.tm_year < (2016 - 1900) && ++retry < retry_count)
-	{
-		IOT_INFO("Waiting for system time to be set... (%d/%d)", retry, retry_count);
-		IOT_DUMP(IOT_DEBUG_LEVEL_DEBUG, IOT_DUMP_BSP_WIFI_SNTP_FAIL, retry, retry_count);
-		IOT_DELAY(2000);
-		time(&now);
-		localtime_r(&now, &timeinfo);
-	}
-
-	sntp_stop();
-
-	if (retry < 10)
-	{
-		IOT_INFO("[WIFI] system time updated by %ld", now);
-		IOT_DUMP(IOT_DEBUG_LEVEL_DEBUG, IOT_DUMP_BSP_WIFI_SNTP_SUCCESS, now, retry);
-	}
-}
-*/
 static bk_err_t bk_wifi_event_post_to_user(void *arg, event_module_t event_module, int event_id, void *event_data)
 {
 	wifi_event_sta_disconnected_t *sta_disconnected;
@@ -123,14 +65,11 @@ static bk_err_t bk_wifi_event_post_to_user(void *arg, event_module_t event_modul
 		break;
 	case EVENT_WIFI_STA_CONNECTED:
 		sta_connected = (wifi_event_sta_connected_t *)event_data;
-		//BK_LOGI(TAG, "STA connected to %s\n", sta_connected->ssid);
 		IOT_INFO("STA connected to %s", sta_connected->ssid);
-		//xEventGroupSetBits(wifi_event_group, WIFI_STA_CONNECT_BIT);
 		break;
 	case EVENT_WIFI_STA_DISCONNECTED:
 		gotIP = false;
 		sta_disconnected = (wifi_event_sta_disconnected_t *)event_data;
-		//BK_LOGI(TAG, "STA disconnected, reason(%d)\n", sta_disconnected->disconnect_reason);
 		IOT_INFO("STA disconnected, reason(%d)",sta_disconnected->disconnect_reason);
 		xEventGroupSetBits(wifi_event_group, WIFI_STA_DISCONNECT_BIT);
 		xEventGroupClearBits(wifi_event_group, WIFI_STA_CONNECT_BIT);
@@ -153,7 +92,6 @@ static bk_err_t bk_wifi_event_post_to_user(void *arg, event_module_t event_modul
 	case EVENT_WIFI_AP_CONNECTED:
 		ap_connected = (wifi_event_ap_connected_t *)event_data;
 		BK_LOGI(TAG, BK_MAC_FORMAT " connected to AP\n", BK_MAC_STR(ap_connected->mac));
-		//IOT_INFO("")
 		if (wifi_event_cb) {
 			IOT_DEBUG("0x%p called", wifi_event_cb);
 			(*wifi_event_cb)(IOT_WIFI_EVENT_SOFTAP_STA_JOIN, IOT_ERROR_NONE);
@@ -161,9 +99,7 @@ static bk_err_t bk_wifi_event_post_to_user(void *arg, event_module_t event_modul
 		break;
 	case EVENT_WIFI_AP_DISCONNECTED:
 		ap_disconnected = (wifi_event_ap_disconnected_t *)event_data;
-		//BK_LOGI(TAG, BK_MAC_FORMAT " disconnected from AP\n", BK_MAC_STR(ap_disconnected->mac));
 		IOT_INFO(BK_MAC_FORMAT " disconnected from AP\n", BK_MAC_STR(ap_disconnected->mac));
-		//xEventGroupSetBits(wifi_event_group, WIFI_AP_DISCONNECT_BIT);
 		break;
 	default:
 		BK_LOGI(TAG, "rx event <%d %d>\n", event_module, event_id);
@@ -218,28 +154,6 @@ iot_error_t iot_bsp_wifi_init()
 	
 	if (WIFI_INITIALIZED)
 		return IOT_ERROR_NONE;
-	/*wifi_init_config_t wifi_config = WIFI_DEFAULT_INIT_CONFIG();
-	bk_ret = bk_event_init();
-	if (bk_ret != BK_OK) {
-		IOT_ERROR("bk_event_init failed err=[%d]", bk_ret);
-		IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_INIT_FAIL, bk_ret, __LINE__);
-		return IOT_ERROR_INIT_FAIL;
-	}
-	printf("ready to call bk_netif_init\r\n");
-	bk_ret = bk_netif_init();
-	if (bk_ret != BK_OK) {
-		IOT_ERROR("bk_netif_init failed err=[%d]", bk_ret);
-		IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_INIT_FAIL, bk_ret, __LINE__);
-		return IOT_ERROR_INIT_FAIL;
-	}
-	
-	bk_ret = bk_wifi_init(&wifi_config);
-	if (bk_ret != BK_OK) {
-		IOT_ERROR("bk_wifi_init failed err=[%d]", bk_ret);
-		IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_INIT_FAIL, bk_ret, __LINE__);
-		return IOT_ERROR_INIT_FAIL;
-	}
-*/
 	wifi_event_group = xEventGroupCreate();
 	bk_ret = bk_event_handler_init();
 	if (bk_ret != BK_OK) {
@@ -285,21 +199,10 @@ iot_error_t iot_bsp_wifi_set_mode(iot_wifi_conf *conf)
 		}
 		break;
 	case IOT_WIFI_MODE_SCAN:
-		printf("[%s][%d][Wifi debug]wifi scan case: entering\r\n", __func__, __LINE__);
-		/*if (wifi_ap_is_started()) {
-			printf("[%s][%d][Wifi debug]wifi scan case: if ap\r\n", __func__, __LINE__);
-			bk_ret = bk_wifi_ap_stop();
-			if (bk_ret != BK_OK) {
-				IOT_ERROR("bk_wifi_ap_stop failed err=[%d]", bk_ret);
-				IOT_DUMP(IOT_DEBUG_LEVEL_ERROR, IOT_DUMP_BSP_WIFI_SETMODE_FAIL, conf->mode, bk_ret);
-				return IOT_ERROR_CONN_OPERATE_FAIL;
-			}
-		}*/
 		/* Handles scan request when device connecting to AP has timed out. Waits for
 		 * disconnect or connect event before start scan to prevent scan rejection.
 		 */
 		if (s_wifi_connect_timeout == true) {
-			printf("[%s][%d][Wifi debug]wifi scan case: if timeout\r\n", __func__, __LINE__);
 			xEventGroupClearBits(wifi_event_group, WIFI_STA_CONNECT_BIT | WIFI_STA_DISCONNECT_BIT);
 
 			uxBits = xEventGroupWaitBits(wifi_event_group,
@@ -452,13 +355,9 @@ uint16_t iot_bsp_wifi_get_scan_result(iot_wifi_scan_result_t *scan_result)
 
 	memset(&result, 0x0, sizeof(result));
 
-	printf("[%s][%d][Wifi debug]ready to call bk_wifi_scan_start\r\n", __func__, __LINE__);
 	bk_wifi_scan_start(NULL);
-	printf("[%s][%d][Wifi debug]called bk_wifi_scan_start\r\n", __func__, __LINE__);
-
 	uxBits = xEventGroupWaitBits(wifi_event_group, WIFI_SCAN_DONE_BIT,
 								 true, false, IOT_WIFI_CMD_TIMEOUT);
-	printf("[%s][%d][Wifi debug]after calling xEventGroupWaitBits\r\n", __func__, __LINE__);
 	if (!(uxBits & WIFI_SCAN_DONE_BIT))
 	{
 		IOT_ERROR("Scan timeout");
@@ -538,19 +437,7 @@ iot_wifi_auth_mode_bits_t iot_bsp_wifi_get_auth_mode(void)
 
 bool iot_bsp_wifi_is_dhcp_success()
 {
-	netif_ip4_config_t config;
-
-	//if (bk_netif_get_ip4_config(NETIF_IF_STA, &config) != BK_OK || memcmp(config.ip, BK_STR_NULL_IP, strlen(BK_STR_NULL_IP)) != 0)
-	//	return false;
-	//EventBits_t uxBits = 0;
-	//uxBits = xEventGroupWaitBits(wifi_event_group, WIFI_STA_CONNECT_BIT,
-	//								 true, false, IOT_WIFI_CMD_TIMEOUT);
-	if(gotIP) {
-		return true;
-	}
-
-	IOT_INFO("IP address: %s", config.ip);
-	return false;
+	return gotIP ? true : false;
 }
 
 
